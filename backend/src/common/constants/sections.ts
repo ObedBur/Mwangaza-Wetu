@@ -1,0 +1,33 @@
+export const SECTIONS_MAPPING = {
+  PRINCIPAL: 'PRINCIPAL',
+  KELASI: 'KELASI',
+  NYUMBA: 'NYUMBA',
+  HOPITAL: 'HOPITAL',
+  BIASHARA: 'BIASHARA',
+  MUTOTO: 'MUTOTO',
+} as const;
+
+export const SECTION_LETTERS = {
+  PRINCIPAL: 'P',
+  KELASI: 'K',
+  NYUMBA: 'N',
+  HOPITAL: 'H',
+  BIASHARA: 'B',
+  MUTOTO: 'M',
+} as const;
+
+export function normalizeSectionName(name: string): string {
+  if (!name) return '';
+  const n = name.trim().toUpperCase();
+  // Handling accents for HOPITAL
+  if (n === 'HÔPITAL' || n === 'HOPITAL') return 'HOPITAL';
+  return SECTIONS_MAPPING[n as keyof typeof SECTIONS_MAPPING] || n;
+}
+
+export function getSectionLetter(sectionName: string): string {
+  const normalized = normalizeSectionName(sectionName);
+  return (
+    SECTION_LETTERS[normalized as keyof typeof SECTION_LETTERS] ||
+    (normalized ? normalized.charAt(0) : 'X')
+  );
+}

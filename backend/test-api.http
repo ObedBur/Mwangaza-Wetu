@@ -1,0 +1,86 @@
+@baseUrl = http://localhost:3000
+
+### --- MEMBRES ---
+
+### Get all members
+GET {{baseUrl}}/api/membres
+Accept: application/json
+
+### Generate a new member number
+GET {{baseUrl}}/api/membres/generate-numero
+Accept: application/json
+
+### Get last member number
+GET {{baseUrl}}/api/membres/last-numero
+Accept: application/json
+
+### Create a new member
+POST {{baseUrl}}/api/membres
+Content-Type: application/json
+
+{
+  "numeroCompte": "M-2024-001",
+  "nomComplet": "Jean Dupont",
+  "dateAdhesion": "2024-02-23T00:00:00.000Z",
+  "telephone": "+243810000000",
+  "email": "jean.dupont@example.com",
+  "adresse": "Lubumbashi, Gecamines",
+  "sexe": "M",
+  "typeCompte": "Epargne",
+  "statut": "actif",
+  "userId": "jdupont",
+  "motDePasse": "password123",
+  "dateNaissance": "1990-01-01",
+  "idNationale": "ID123456789"
+}
+
+### Check if userId exists
+GET {{baseUrl}}/api/membres/check-userid/jdupont
+Accept: application/json
+
+
+### --- EPARGNES (SAVINGS) ---
+
+### Get all savings
+GET {{baseUrl}}/api/epargnes
+Accept: application/json
+
+### Create a deposit
+POST {{baseUrl}}/api/epargnes
+Content-Type: application/json
+
+{
+  "compte": "M-2024-001",
+  "typeOperation": "depot",
+  "devise": "USD",
+  "montant": 100,
+  "dateOperation": "2024-02-23T12:00:00.000Z",
+  "description": "Premier dépôt"
+}
+
+### Get balances for a member
+GET {{baseUrl}}/api/epargnes/soldes/M-2024-001
+Accept: application/json
+
+
+### --- AUTH ---
+
+### Admin Login (Test)
+POST {{baseUrl}}/api/auth/admin/login
+Content-Type: application/json
+
+{
+  "email": "admin@mwangaza.com",
+  "motDePasse": "votre_mot_de_passe"
+}
+
+
+### --- RAPPORT & SOLDE ---
+
+### Get global totals
+GET {{baseUrl}}/api/solde/total
+Accept: application/json
+
+### Get financial dashboard statistics
+GET {{baseUrl}}/api/rapport
+Accept: application/json

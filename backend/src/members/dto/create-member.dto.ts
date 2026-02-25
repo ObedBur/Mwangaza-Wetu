@@ -1,0 +1,110 @@
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+export enum Sexe {
+  M = 'M',
+  F = 'F',
+}
+
+export enum StatutMembre {
+  ACTIF = 'actif',
+  INACTIF = 'inactif',
+}
+
+export class CreateDelegueDto {
+  @IsString()
+  @IsNotEmpty()
+  nom: string;
+
+  @IsString()
+  @IsNotEmpty()
+  telephone: string;
+
+  @IsString()
+  @IsNotEmpty()
+  relation: string;
+
+  @IsString()
+  @IsOptional()
+  pieceIdentite?: string;
+
+  @IsString()
+  @IsOptional()
+  userId?: string;
+
+  @IsString()
+  @IsOptional()
+  photoProfil?: string;
+}
+
+export class CreateMemberDto {
+  @IsString()
+  @IsNotEmpty()
+  numeroCompte: string;
+
+  @IsString()
+  @IsNotEmpty()
+  nomComplet: string;
+
+  @IsString()
+  @IsNotEmpty()
+  dateAdhesion: string;
+
+  @IsString()
+  @IsNotEmpty()
+  telephone: string;
+
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsOptional()
+  adresse?: string;
+
+  @IsEnum(Sexe)
+  @IsOptional()
+  sexe?: Sexe;
+
+  @IsString()
+  @IsNotEmpty()
+  typeCompte: string;
+
+  @IsEnum(StatutMembre)
+  @IsNotEmpty()
+  statut: StatutMembre;
+
+  @IsString()
+  @IsOptional()
+  photoProfil?: string;
+
+  @IsString()
+  @IsOptional()
+  userId?: string;
+
+  @IsString()
+  @IsOptional()
+  @MinLength(4)
+  motDePasse?: string;
+
+  @IsString()
+  @IsOptional()
+  dateNaissance?: string;
+
+  @IsString()
+  @IsOptional()
+  idNationale?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateDelegueDto)
+  delegue?: CreateDelegueDto;
+}
