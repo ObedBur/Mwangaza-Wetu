@@ -1,3 +1,4 @@
+// src/zkteco/sync/sync.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ZktecoService } from '../zkteco.service';
@@ -34,16 +35,12 @@ export class SyncService {
           continue;
         }
 
-        // Vérifier si ce log existe déjà
+        // Vérifier si déjà présent
         const existing = await this.prisma.attendance.findFirst({
-          where: {
-            uid: uid,
-            timestamp: timestamp,
-          },
+          where: { uid, timestamp },
         });
 
         if (!existing) {
-          // Chercher le membre correspondant via son userId (UID de l'appareil)
           const membre = await this.prisma.membre.findFirst({
             where: { userId: uid },
           });
@@ -51,33 +48,36 @@ export class SyncService {
           if (membre) {
             await this.prisma.attendance.create({
               data: {
-                uid: uid,
-                timestamp: timestamp,
+                uid,
+                timestamp,
                 membreId: membre.id,
               },
             });
-            this.logger.debug(`Log ajouté pour le membre ${membre.nomComplet} (${uid}) à ${timestamp}`);
+            this.logger.debug(`Synchronisé → ${membre.nomComplet} (${uid})`);
           } else {
-            this.logger.warn(`Aucun membre trouvé pour l'UID ${uid} – log ignoré`);
+            this.logger.warn(`UID ${uid} inconnu – aucun membre associé`);
           }
         }
       }
 
-      this.logger.log('Synchronisation terminée');
+      this.logger.log('Synchronisation manuelle terminée avec succès');
     } catch (error) {
       this.logger.error('Erreur lors de la synchronisation', error);
+      throw error;
     }
   }
 
   async startRealTimeListener() {
-    await this.zkteco.getRealTimeLogs(async (log) => {
-      this.logger.debug('Nouveau log reçu en temps réel:', log);
+    this.logger.log('Démarrage de l\'écoute temps réel...');
+
+    await this.zkteco.startRealtime(async (log) => {
+      this.logger.debug('Pointage temps réel reçu:', log);
 
       const uid = log.userSn?.toString() || log.userId?.toString();
       const timestamp = new Date(log.recordTime || log.timestamp);
 
       if (!uid || isNaN(timestamp.getTime())) {
-        this.logger.warn('Log temps réel ignoré (UID ou timestamp invalide)');
+        this.logger.warn('Log temps réel invalide ignoré');
         return;
       }
 
@@ -85,22 +85,24 @@ export class SyncService {
         where: { userId: uid },
       });
 
-      if (membre) {
-        const existing = await this.prisma.attendance.findFirst({
-          where: { uid, timestamp },
+      if (!membre) {
+        this.logger.warn(`Pointage ignoré – UID ${uid} inconnu dans la base`);
+        return;
+      }
+
+      const exists = await this.prisma.attendance.findFirst({
+        where: { uid, timestamp },
+      });
+
+      if (!exists) {
+        await this.prisma.attendance.create({
+          data: {
+            uid,
+            timestamp,
+            membreId: membre.id,
+          },
         });
-        if (!existing) {
-          await this.prisma.attendance.create({
-            data: {
-              uid: uid,
-              timestamp: timestamp,
-              membreId: membre.id,
-            },
-          });
-          this.logger.log(`Nouveau log temps réel enregistré pour ${membre.nomComplet}`);
-        }
-      } else {
-        this.logger.warn(`Aucun membre trouvé pour l'UID ${uid} (log temps réel ignoré)`);
+        this.logger.log(`Pointage temps réel → ${membre.nomComplet} à ${timestamp.toLocaleTimeString()}`);
       }
     });
   }

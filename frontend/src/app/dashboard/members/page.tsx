@@ -7,18 +7,27 @@ import MembersTable from "@/components/members/MembersTable";
 import CreateMemberModal from "@/components/members/CreateMemberModal";
 import { useCreateMember } from "@/hooks/useMembers";
 import { MemberInput } from "@/lib/validations";
+import { useToast } from "@/hooks/use-toast";
 
 export default function MembersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { mutateAsync: createMember } = useCreateMember();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const handleCreateMember = async (data: MemberInput) => {
     try {
-      await createMember(data);
+      const response = await createMember(data);
       setIsModalOpen(false);
-    } catch (error) {
+      toastSuccess(
+        "Membre créé avec succès",
+        `Le numéro de compte généré est : ${response.numeroCompte}`
+      );
+    } catch (error: any) {
       console.error("Failed to create member:", error);
-      // Ici on pourrait ajouter une notification d'erreur
+      toastError(
+        "Échec de la création",
+        error.message || "Une erreur est survenue lors de la création du membre"
+      );
     }
   };
 

@@ -1,6 +1,10 @@
 import axios, { AxiosError } from 'axios';
+import { getCookie, removeAuthCookies, COOKIE_NAME } from './cookies';
 
-// ─── Instance Axios ────────────────────────────────────────────────────────────
+/**
+ * Instance Axios configurée pour l'API Mwangaza Wetu.
+ * Compatible avec le Client Side et le Server Side (SSR).
+ */
 export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
   headers: {
@@ -8,9 +12,10 @@ export const apiClient = axios.create({
   },
 });
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Parcourt récursivement un objet et convertit chaque Date en ISO string */
+/** 
+ * Parcourt récursivement un objet et convertit chaque Date en ISO string 
+ * Utile pour l'envoi de données complexes au backend NestJS/Prisma.
+ */
 const convertDatesToISO = (obj: unknown): unknown => {
   if (obj === null || obj === undefined) return obj;
   if (obj instanceof Date) return obj.toISOString();
@@ -27,24 +32,27 @@ const convertDatesToISO = (obj: unknown): unknown => {
   return obj;
 };
 
-/** Format d'erreur normalisé renvoyé par l'intercepteur de réponse */
 export interface ApiError {
   message: string;
   status: number;
   data?: unknown;
 }
 
-// ─── Intercepteur de REQUÊTE ───────────────────────────────────────────────────
+/**
+ * INTERCEPTEUR DE REQUÊTE
+ * Gère l'injection automatique du token bearer.
+ */
 apiClient.interceptors.request.use(
   (config) => {
-    // 1. Conversion automatique des objets Date en ISO strings
+    // 1. Conversion automatique des Dates
     if (config.data) {
       config.data = convertDatesToISO(config.data);
     }
 
-    // 2. Injection du token JWT depuis localStorage
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
+    // 2. Injection du token
+    // On ne l'injecte que si le header n'est pas déjà présent (permet l'injection manuelle côté SSR)
+    if (!config.headers.Authorization) {
+      const token = getCookie(COOKIE_NAME);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -55,30 +63,31 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// ─── Intercepteur de RÉPONSE ───────────────────────────────────────────────────
+/**
+ * INTERCEPTEUR DE RÉPONSE
+ * Gère la normalisation des erreurs et la déconnexion automatique (401).
+ */
 apiClient.interceptors.response.use(
-  // Succès : on laisse passer la réponse telle quelle
   (response) => response,
-
-  // Erreur : on normalise le format
   (error: AxiosError) => {
     const status = error.response?.status ?? 0;
     const responseData = error.response?.data as Record<string, unknown> | undefined;
 
-    // Extraire le message de l'erreur depuis la réponse backend (NestJS)
+    // Normalisation du message d'erreur NestJS
     const message: string =
       (responseData?.message as string) ??
       (Array.isArray(responseData?.message)
         ? (responseData?.message as string[]).join(', ')
-        : null) ??
+        : (responseData?.message as any)?.message) ??
       error.message ??
       'Une erreur inattendue est survenue.';
 
-    // Gestion spéciale 401 – token expiré ou invalide
-    if (status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
-      // Redirection vers la page de connexion (sans dépendance Next.js router)
-      window.location.href = '/login';
+    // Gestion de l'expiration de session (401)
+    // On ne redirige pas si on est déjà sur une route d'authentification
+    const isAuthRoute = error.config?.url?.includes('/auth/');
+    if (status === 401 && !isAuthRoute && typeof window !== 'undefined') {
+      removeAuthCookies();
+      window.location.href = '/';
     }
 
     const normalizedError: ApiError = {

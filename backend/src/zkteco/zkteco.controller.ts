@@ -41,7 +41,7 @@ export class ZktecoController {
 
   @Post('clear')
   async clear() {
-    await this.zkteco.clearAttendanceLog();
+    await this.zkteco.clearAttendance()  
     return { message: 'Logs effacés' };
   }
 

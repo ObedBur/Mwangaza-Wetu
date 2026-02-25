@@ -1,12 +1,199 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model Attendance {
+  id        Int      @id @default(autoincrement())
+  uid       String
+  timestamp DateTime
+  membreId  Int?
+  membre    Membre?  @relation(fields: [membreId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+model Membre {
+  id             Int             @id @default(autoincrement())
+  numeroCompte   String          @unique @map("numero_compte")
+  nomComplet     String          @map("nom_complet")
+  dateAdhesion   DateTime        @map("date_adhesion")
+  telephone      String
+  email          String?
+  adresse        String?
+  sexe           Sexe?
+  typeCompte     String          @map("type_compte")
+  statut         StatutMembre    @default(actif)
+  photoProfil    String?         @map("photo_profil")
+  userId         String?         @map("userId")
+  motDePasse     String?         @map("mot_de_passe")
+  dateNaissance  DateTime?       @map("date_naissance")
+  idNationale    String?         @map("id_nationale")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  comptesEpargne CompteEpargne[]
+  credits        Credit[]
+  delegues       Delegue[]
+  epargnes       Epargne[]
+  retraits       Retrait[]
+  attendances Attendance[] 
+
+  @@map("membres")
+}
+
+model Administrateur {
+  id           Int      @id @default(autoincrement())
+  nom          String
+  prenom       String
+  email        String   @unique
+  telephone    String
+  motDePasse   String   @map("mot_de_passe")
+  role         Role     @default(admin)
+  actif        Boolean  @default(true)
+  numeroCompte String?  @unique @map("numero_compte")
+  userId       String?  @unique @map("userId")
+  dateCreation DateTime @default(now()) @map("date_creation")
+
+  @@map("administrateurs")
+}
+
+model Delegue {
+  id            Int      @id @default(autoincrement())
+  membreId      Int      @map("membre_id")
+  nom           String
+  telephone     String
+  relation      String
+  pieceIdentite String?  @map("piece_identite")
+  userId        String?  @map("userId")
+  photoProfil   String?  @map("photo_profil")
+  createdAt     DateTime @default(now()) @map("created_at")
+  membre        Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+
+  @@map("delegues")
+}
+
+model Section {
+  id           Int      @id @default(autoincrement())
+  nom          String   @unique
+  numeroCompte String   @unique @map("numero_compte")
+  solde        Float    @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("sections")
+}
+
+model CompteEpargne {
+  id            Int       @id @default(autoincrement())
+  numeroCompte  String    @map("numero_compte")
+  typeCompte    String    @map("type_compte")
+  solde         Float     @default(0)
+  dateOuverture DateTime? @default(now()) @map("date_ouverture")
+  statut        String?   @default("actif")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  membre        Membre    @relation(fields: [numeroCompte], references: [numeroCompte])
+
+  @@unique([numeroCompte, typeCompte])
+  @@map("comptes_epargne")
+}
+
+model Epargne {
+  id            Int                  @id @default(autoincrement())
+  compte        String
+  typeOperation TypeOperationEpargne @map("type_operation")
+  devise        Devise
+  montant       Float
+  dateOperation DateTime             @map("date_operation")
+  description   String?
+  createdAt     DateTime             @default(now()) @map("created_at")
+  membre        Membre               @relation(fields: [compte], references: [numeroCompte])
+
+  @@map("epargnes")
+}
+
+model Retrait {
+  id            Int      @id @default(autoincrement())
+  compte        String
+  devise        Devise
+  montant       Float
+  dateOperation DateTime @map("date_operation")
+  description   String?
+  soldeAvant    Float    @map("solde_avant")
+  soldeApres    Float    @map("solde_apres")
+  frais         Float    @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
+  membre        Membre   @relation(fields: [compte], references: [numeroCompte])
+
+  @@map("retraits")
+}
+
+model Credit {
+  id               Int             @id @default(autoincrement())
+  numeroCompte     String          @map("numero_compte")
+  montant          Float
+  montantRembourse Float           @default(0) @map("montant_rembourse")
+  devise           String
+  tauxInteret      Float           @map("taux_interet")
+  duree            Int
+  dateDebut        DateTime        @map("date_debut")
+  dateEcheance     DateTime?       @map("date_echeance")
+  statut           StatutCredit    @default(actif)
+  description      String?
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  membre           Membre          @relation(fields: [numeroCompte], references: [numeroCompte])
+  remboursements   Remboursement[]
+
+  @@map("credits")
+}
+
+model Remboursement {
+  id                Int      @id @default(autoincrement())
+  creditId          Int      @map("credit_id")
+  montant           Float
+  devise            String
+  dateRemboursement DateTime @map("date_remboursement")
+  description       String?
+  createdAt         DateTime @default(now()) @map("created_at")
+  credit            Credit   @relation(fields: [creditId], references: [id])
+
+  @@map("remboursements")
+}
+
+model ParametreEpargne {
+  id           Int      @id @default(autoincrement())
+  nomParametre String   @unique @map("nom_parametre")
+  valeur       String
+  description  String?
+  updatedAt    DateTime @default(now()) @map("updated_at")
+
+  @@map("parametres_epargne")
+}
+
+model AdminConfirmation {
+  id               Int       @id @default(autoincrement())
+  adminId          Int       @map("admin_id")
+  confirmationCode String    @map("confirmation_code")
+  confirmedAt      DateTime? @map("confirmed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@map("admin_confirmations")
+}
+
+model AdminLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  details   String?
+  success   Boolean
+  userId    Int?     @map("user_id")
+  ipAddress String?  @map("ip_address")
+  timestamp DateTime @default(now())
+
+  @@map("admin_logs")
 }
 
 enum Role {
@@ -38,199 +225,4 @@ enum StatutCredit {
   actif
   rembourse
   en_retard
-}
-
-model Membre {
-  id              Int            @id @default(autoincrement())
-  numeroCompte    String         @unique @map("numero_compte")
-  nomComplet      String         @map("nom_complet")
-  dateAdhesion    DateTime       @map("date_adhesion")
-  telephone       String
-  email           String?
-  adresse         String?
-  sexe            Sexe?
-  typeCompte      String         @map("type_compte")
-  statut          StatutMembre   @default(actif)
-  photoProfil     String?        @map("photo_profil")
-  userId          String?        @unique @map("userId") // RENDRE UNIQUE pour liaison facile
-  motDePasse      String?        @map("mot_de_passe")
-  dateNaissance   DateTime?      @map("date_naissance")
-  idNationale     String?        @map("id_nationale")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-
-  delegues        Delegue[]
-  comptesEpargne  CompteEpargne[]
-  credits         Credit[]
-  epargnes        Epargne[]
-  retraits        Retrait[]
-  attendances     Attendance[]    // RELATION AJOUTÉE
-
-  @@map("membres")
-}
-
-model Administrateur {
-  id              Int            @id @default(autoincrement())
-  nom             String
-  prenom          String
-  email           String         @unique
-  telephone       String
-  motDePasse      String         @map("mot_de_passe")
-  role            Role           @default(admin)
-  actif           Boolean        @default(true)
-  numeroCompte    String?        @unique @map("numero_compte")
-  userId          String?        @unique @map("userId")
-  dateCreation    DateTime       @default(now()) @map("date_creation")
-
-  @@map("administrateurs")
-}
-
-model Delegue {
-  id              Int            @id @default(autoincrement())
-  membreId        Int            @map("membre_id")
-  membre          Membre         @relation(fields: [membreId], references: [id], onDelete: Cascade)
-  nom             String
-  telephone       String
-  relation        String
-  pieceIdentite   String?        @map("piece_identite")
-  userId          String?        @map("userId")
-  photoProfil     String?        @map("photo_profil")
-  createdAt       DateTime       @default(now()) @map("created_at")
-
-  @@map("delegues")
-}
-
-model Section {
-  id              Int            @id @default(autoincrement())
-  nom             String         @unique
-  numeroCompte    String         @unique @map("numero_compte")
-  solde           Float          @default(0)
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-
-  @@map("sections")
-}
-
-model CompteEpargne {
-  id              Int            @id @default(autoincrement())
-  numeroCompte    String         @map("numero_compte")
-  membre          Membre         @relation(fields: [numeroCompte], references: [numeroCompte])
-  typeCompte      String         @map("type_compte")
-  solde           Float          @default(0)
-  dateOuverture   DateTime?      @default(now()) @map("date_ouverture")
-  statut          String?        @default("actif")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
-
-  @@unique([numeroCompte, typeCompte])
-  @@map("comptes_epargne")
-}
-
-model Epargne {
-  id              Int            @id @default(autoincrement())
-  compte          String
-  membre          Membre?        @relation(fields: [compte], references: [numeroCompte])
-  typeOperation   TypeOperationEpargne  @map("type_operation")
-  devise          Devise
-  montant         Float
-  dateOperation   DateTime       @map("date_operation")
-  description     String?
-  createdAt       DateTime       @default(now()) @map("created_at")
-
-  @@map("epargnes")
-}
-
-model Retrait {
-  id              Int            @id @default(autoincrement())
-  compte          String
-  membre          Membre         @relation(fields: [compte], references: [numeroCompte])
-  devise          Devise
-  montant         Float
-  dateOperation   DateTime       @map("date_operation")
-  description     String?
-  soldeAvant      Float          @map("solde_avant")
-  soldeApres      Float          @map("solde_apres")
-  frais           Float          @default(0)
-  createdAt       DateTime       @default(now()) @map("created_at")
-
-  @@map("retraits")
-}
-
-model Credit {
-  id               Int            @id @default(autoincrement())
-  numeroCompte     String         @map("numero_compte")
-  membre           Membre         @relation(fields: [numeroCompte], references: [numeroCompte])
-  montant          Float
-  montantRembourse Float          @default(0) @map("montant_rembourse")
-  devise           String
-  tauxInteret      Float          @map("taux_interet")
-  duree            Int
-  dateDebut        DateTime       @map("date_debut")
-  dateEcheance     DateTime?      @map("date_echeance")
-  statut           StatutCredit   @default(actif)
-  description      String?
-  createdAt        DateTime       @default(now()) @map("created_at")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
-
-  remboursements   Remboursement[]
-
-  @@map("credits")
-}
-
-model Remboursement {
-  id               Int            @id @default(autoincrement())
-  creditId         Int            @map("credit_id")
-  credit           Credit         @relation(fields: [creditId], references: [id])
-  montant          Float
-  devise           String
-  dateRemboursement DateTime      @map("date_remboursement")
-  description      String?
-  createdAt        DateTime       @default(now()) @map("created_at")
-
-  @@map("remboursements")
-}
-
-model ParametreEpargne {
-  id             Int            @id @default(autoincrement())
-  nomParametre   String         @unique @map("nom_parametre")
-  valeur         String
-  description    String?
-  updatedAt      DateTime       @default(now()) @map("updated_at")
-
-  @@map("parametres_epargne")
-}
-
-model AdminConfirmation {
-  id               Int            @id @default(autoincrement())
-  adminId          Int            @map("admin_id")
-  confirmationCode String         @map("confirmation_code")
-  confirmedAt      DateTime?      @map("confirmed_at")
-  createdAt        DateTime       @default(now()) @map("created_at")
-
-  @@map("admin_confirmations")
-}
-
-model AdminLog {
-  id        Int      @id @default(autoincrement())
-  action    String
-  details   String?
-  success   Boolean
-  userId    Int?     @map("user_id")
-  ipAddress String?  @map("ip_address")
-  timestamp DateTime @default(now())
-
-  @@map("admin_logs")
-}
-
-// NOUVEAU MODÈLE POUR LES POINTAGES
-model Attendance {
-  id        Int      @id @default(autoincrement())
-  uid       String   // correspond à l'ID utilisateur de l'appareil (ex: "1", "2")
-  timestamp DateTime
-  membreId  Int      @map("membre_id")
-  membre    Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@unique([uid, timestamp]) // évite les doublons
-  @@map("attendances")
 }

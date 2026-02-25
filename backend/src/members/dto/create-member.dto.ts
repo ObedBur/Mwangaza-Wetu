@@ -2,6 +2,7 @@ import {
   IsEmail,
   IsEnum,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   MinLength,
@@ -47,8 +48,8 @@ export class CreateDelegueDto {
 
 export class CreateMemberDto {
   @IsString()
-  @IsNotEmpty()
-  numeroCompte: string;
+  @IsOptional()
+  numeroCompte?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -102,6 +103,14 @@ export class CreateMemberDto {
   @IsString()
   @IsOptional()
   idNationale?: string;
+
+  @IsNumber()
+  @IsOptional()
+  montantInitial?: number;
+
+  @IsString()
+  @IsOptional()
+  deviseInitial?: string;
 
   @IsOptional()
   @ValidateNested()

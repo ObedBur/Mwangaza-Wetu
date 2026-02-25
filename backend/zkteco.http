@@ -1,0 +1,65 @@
+### Configuration
+@baseUrl = http://localhost:3000
+@controller = zkteco
+
+# ==========================================
+# 1. GESTION DE LA CONNEXION (Étape obligatoire)
+# ==========================================
+
+### 🔌 Connecter l'appareil
+# À faire en premier avant toute autre requête !
+POST {{baseUrl}}/{{controller}}/connect
+Content-Type: application/json
+
+###
+
+### 🔌 Déconnecter l'appareil
+POST {{baseUrl}}/{{controller}}/disconnect
+Content-Type: application/json
+
+###
+
+# ==========================================
+# 2. LECTURE DES DONNÉES (ZKTeco -> JSON)
+# ==========================================
+
+### 👥 Récupérer tous les utilisateurs (IDs et Noms)
+GET {{baseUrl}}/{{controller}}/users
+Content-Type: application/json
+
+###
+
+### 📋 Récupérer tous les logs de présence bruts (Attendances)
+GET {{baseUrl}}/{{controller}}/attendances
+Content-Type: application/json
+
+###
+
+# ==========================================
+# 3. SYNCHRONISATION (ZKTeco -> Base de données)
+# ==========================================
+
+### 🔄 Lancer la synchronisation manuelle
+# Va lire les logs de l'appareil et les sauvegarder dans votre table Prisma 'Attendance'
+POST {{baseUrl}}/{{controller}}/sync
+Content-Type: application/json
+
+###
+
+# ==========================================
+# 4. TEMPS RÉEL & MAINTENANCE
+# ==========================================
+
+### ⏱️ Démarrer l'écoute en temps réel
+# Attention : cette requête restera en attente (long polling).
+# Les logs apparaîtront dans le terminal du backend.
+POST {{baseUrl}}/{{controller}}/realtime/start
+Content-Type: application/json
+
+###
+
+### ⚠️ DANGER : Effacer les logs de l'appareil
+# Ne lancez ça que si vous êtes sûr d'avoir tout synchronisé !
+# Décommentez les lignes ci-dessous pour utiliser :
+POST {{baseUrl}}/{{controller}}/clear
+Content-Type: application/json

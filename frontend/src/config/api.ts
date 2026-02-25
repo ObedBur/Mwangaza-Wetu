@@ -32,7 +32,16 @@ export const API_ROUTES = {
   // ─── Auth ─────────────────────────────────────────
   AUTH_LOGIN: '/auth/login',
   AUTH_REGISTER: '/auth/register',
-
+  AUTH_LOGOUT: '/auth/logout',
+  AUTH_ME: '/auth/me',              // Profil utilisateur connecté
+  AUTH_REFRESH: '/auth/refresh',
+  
+  // ─── Guichets ─────────────────────────────────────
+  GUICHETS: '/guichets',           // ✅ Tu as la page mais pas la route
+  
+  // ─── Comptabilité ─────────────────────────────────
+  COMPTABILITE: '/comptabilite', 
+  
   // ─── Admin ────────────────────────────────────────
   ADMIN: '/admin',
 

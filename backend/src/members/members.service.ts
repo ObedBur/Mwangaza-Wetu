@@ -12,7 +12,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Prisma, StatutMembre as PrismaStatutMembre } from '@prisma/client';
+import { Prisma, StatutMembre as PrismaStatutMembre, Devise } from '@prisma/client';
 
 @Injectable()
 export class MembersService {
@@ -138,14 +138,30 @@ export class MembersService {
       typeCompte,
       dateAdhesion,
       delegue,
+      montantInitial,
+      deviseInitial,
     } = createMemberDto;
 
-    // Vérifier l'unicité
-    const existingNum = await this.prisma.membre.findUnique({
-      where: { numeroCompte },
-    });
-    if (existingNum)
-      throw new BadRequestException('Ce numéro de compte existe déjà');
+    // Normaliser le type de compte pour la cohérence des stats
+    const typeNormalise = normalizeSectionName(typeCompte);
+    const dateAdh = new Date(dateAdhesion);
+    const yearAdh = isNaN(dateAdh.getTime())
+      ? new Date().getFullYear()
+      : dateAdh.getFullYear();
+
+    // Générer le numéro de compte s'il n'est pas fourni
+    let finalNumeroCompte = numeroCompte;
+    if (!finalNumeroCompte) {
+      const sectionLetter = getSectionLetter(typeNormalise);
+      finalNumeroCompte = await this.generateNumero(yearAdh, sectionLetter);
+    } else {
+      // Vérifier l'unicité seulement s'il est fourni
+      const existingNum = await this.prisma.membre.findUnique({
+        where: { numeroCompte: finalNumeroCompte },
+      });
+      if (existingNum)
+        throw new BadRequestException('Ce numéro de compte existe déjà');
+    }
 
     if (userId) {
       const existingUser = await this.prisma.membre.findFirst({
@@ -156,7 +172,7 @@ export class MembersService {
     }
 
     // Gérer la section et le compte collectif
-    await this.ensureSectionAndCollectiveAccount(typeCompte, dateAdhesion);
+    await this.ensureSectionAndCollectiveAccount(typeNormalise, dateAdhesion);
 
     let hashedPassword: string | null = null;
     if (motDePasse) {
@@ -172,13 +188,13 @@ export class MembersService {
     return this.prisma.$transaction(async (tx) => {
       const membre = await tx.membre.create({
         data: {
-          numeroCompte,
+          numeroCompte: finalNumeroCompte,
           nomComplet: createMemberDto.nomComplet,
           telephone: createMemberDto.telephone,
           email: createMemberDto.email,
           adresse: createMemberDto.adresse,
           sexe: createMemberDto.sexe as Sexe,
-          typeCompte: createMemberDto.typeCompte,
+          typeCompte: typeNormalise, // Utiliser la valeur normalisée
           statut: createMemberDto.statut as PrismaStatutMembre,
           photoProfil: photoFileName,
           userId: createMemberDto.userId,
@@ -191,7 +207,21 @@ export class MembersService {
         },
       });
 
-      // Gérer le délégué
+      // 1. Gérer le dépôt initial si présent
+      if (montantInitial && montantInitial > 0) {
+        await tx.epargne.create({
+          data: {
+            compte: membre.numeroCompte,
+            typeOperation: 'depot',
+            devise: (deviseInitial as any) || 'FC', // Utilisation de any si le type n'est pas trouvé
+            montant: montantInitial,
+            dateOperation: new Date(dateAdhesion),
+            description: "Dépôt initial à l'ouverture du compte",
+          },
+        });
+      }
+
+      // 2. Gérer le délégué
       if (delegue) {
         const deleguePhotoFileName = this.saveBase64Image(
           delegue.photoProfil || '',

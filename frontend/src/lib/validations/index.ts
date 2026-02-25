@@ -80,8 +80,12 @@ export const repaymentSchema = transactionSchema.extend({
  * AuthSchema (Connexion)
  */
 export const loginSchema = z.object({
-  accountNumber: z.string().min(1, "Le numéro de compte est requis"),
-  password: z.string().min(6, "Le mot de passe doit contenir au moins 6 caractères"),
+  identifier: z.string()
+    .min(1, "Veuillez saisir votre email ou numéro de compte")
+    .min(3, "L'identifiant est trop court"),
+  password: z.string()
+    .min(1, "Le mot de passe est requis")
+    .min(6, "Le mot de passe doit contenir au moins 6 caractères"),
 });
 
 /**

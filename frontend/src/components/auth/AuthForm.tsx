@@ -24,7 +24,7 @@ export default function AuthForm({
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      accountNumber: "",
+      identifier: "",
       password: "",
     },
   });
@@ -36,19 +36,19 @@ export default function AuthForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-1">
-      {/* Account Number Input */}
+      {/* Identifiant (Email ou Numéro de compte) */}
       <div>
         <AuthInput
-          label="Member / Account Number"
-          placeholder="COOP-A-001234"
+          label="Email ou Numéro de compte"
+          placeholder="ex: jean@mwangaza.cd ou COOP-P-2026-0001"
           icon="badge"
-          helperText="Format: COOP-A-... or COOP-M-..."
+          helperText="Saisissez votre identifiant pour vous connecter"
           required
-          {...register("accountNumber")}
+          {...register("identifier")}
         />
-        {errors.accountNumber && (
+        {errors.identifier && (
           <p className="text-red-500 text-xs mt-1">
-            {errors.accountNumber.message}
+            {errors.identifier.message}
           </p>
         )}
       </div>
