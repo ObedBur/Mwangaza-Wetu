@@ -19,6 +19,12 @@ export const memberSchema = z.object({
   motDePasse: z.string().min(4, "Le mot de passe doit contenir au moins 4 caractères").optional(),
   dateNaissance: z.string().optional(),
   idNationale: z.string().optional(),
+  delegue: z.object({
+    nom: z.string().optional().or(z.literal("")),
+    telephone: z.string().optional().or(z.literal("")),
+    relation: z.string().optional().or(z.literal("")),
+    pieceIdentite: z.string().optional().or(z.literal("")),
+  }).optional(),
 });
 
 /**

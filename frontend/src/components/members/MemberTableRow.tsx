@@ -4,6 +4,7 @@ import { User } from "lucide-react";
 import { MoreVertical } from "lucide-react";
 
 import { MemberRecord } from "@/types";
+import { ACCOUNT_TYPES } from "@/lib/constants";
 
 interface MemberTableRowProps {
   member: MemberRecord;
@@ -72,8 +73,13 @@ export default function MemberTableRow({
         </p>
       </td>
       <td className="px-4 sm:px-6 py-3 sm:py-4">
-        <span className="text-[10px] sm:text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 sm:px-3 py-1.5 rounded-lg line-clamp-1">
-          {member.typeCompte}
+        <span className="text-[10px] sm:text-xs font-bold bg-slate-100 dark:bg-slate-800 px-2 sm:px-3 py-1.5 rounded-lg line-clamp-1 whitespace-nowrap">
+          {(() => {
+            const type = ACCOUNT_TYPES.find(
+              (t) => t.value === member.typeCompte,
+            );
+            return type ? `${type.prefix} - ${type.label}` : member.typeCompte;
+          })()}
         </span>
       </td>
       <td className="px-4 sm:px-6 py-3 sm:py-4">

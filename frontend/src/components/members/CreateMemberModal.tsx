@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X, Fingerprint, Loader2 } from "lucide-react";
+import { X, Fingerprint, Loader2, Hash } from "lucide-react";
 import { memberSchema, MemberInput } from "@/lib/validations";
+import { useGenerateAccountNumber } from "@/hooks/useMembers";
+import { ACCOUNT_TYPES } from "@/lib/constants";
 
 interface CreateMemberModalProps {
   isOpen: boolean;
@@ -39,11 +42,27 @@ export default function CreateMemberModal({
   });
 
   const typeCompte = watch("typeCompte");
+  const dateAdhesion = watch("dateAdhesion");
+
+  // Hook pour générer le numéro de compte en temps réel
+  const { data: generatedNumero, isLoading: isGenerating } =
+    useGenerateAccountNumber(typeCompte, dateAdhesion);
+
+  // Mettre à jour le champ numeroCompte du formulaire quand le backend répond
+  useEffect(() => {
+    if (generatedNumero) {
+      setValue("numeroCompte", generatedNumero);
+    }
+  }, [generatedNumero, setValue]);
 
   const handleFormSubmit = (data: MemberInput) => {
+    // Nettoyer le délégué s'il est vide
+    if (data.delegue && !data.delegue.nom) {
+      delete data.delegue;
+    }
     onSubmit(data);
     reset();
-  };
+  };;
 
   if (!isOpen) return null;
 
@@ -92,6 +111,70 @@ export default function CreateMemberModal({
                 </h4>
               </div>
               <div className="space-y-3">
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-slate-600">
+                      Type de Compte
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {ACCOUNT_TYPES.map((type) => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() =>
+                            setValue("typeCompte", type.value, {
+                              shouldValidate: true,
+                            })
+                          }
+                          className={`p-2 sm:p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 ${
+                            typeCompte === type.value
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:border-slate-200 dark:hover:border-slate-600"
+                          }`}
+                        >
+                          <span className="text-[10px] font-black leading-none">
+                            COOP-{type.prefix}
+                          </span>
+                          <span className="text-[10px] sm:text-xs font-bold uppercase truncate">
+                            {type.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    {errors.typeCompte && (
+                      <p className="text-red-500 text-[10px] mt-1">
+                        {errors.typeCompte.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Affichage du Numéro de Compte Suggéré */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                      <Hash className="w-3 h-3 text-primary" />
+                      Numéro de compte attribué
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        {...register("numeroCompte")}
+                        readOnly
+                        placeholder="Génération en cours..."
+                        className="w-full bg-primary/5 border border-primary/20 rounded-lg text-xs sm:text-sm p-2.5 font-mono font-bold text-primary cursor-default outline-none"
+                      />
+                      {isGenerating && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-500 italic">
+                      Ce numéro est généré automatiquement selon la section et
+                      l&apos;année.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-600">
                     Nom complet
@@ -132,7 +215,7 @@ export default function CreateMemberModal({
                     <input
                       type="text"
                       {...register("idNationale")}
-                      placeholder="00000000"
+                      placeholder="00000000000"
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
                     />
                     {errors.idNationale && (
@@ -210,9 +293,9 @@ export default function CreateMemberModal({
                     <Fingerprint className="w-8 sm:w-10 h-8 sm:h-10 animate-pulse" />
                   </div>
                 </div>
-                <div className="space-y-1 w-full">
+                <div className="space-y-1 w-full text-left">
                   <label className="text-xs font-semibold text-slate-600">
-                    Adresse Physique
+                    Adresse physique
                   </label>
                   <textarea
                     {...register("adresse")}
@@ -229,46 +312,81 @@ export default function CreateMemberModal({
               </div>
             </div>
 
-            {/* Section 3: Account Setup */}
-            <div className="space-y-4 pb-8">
+            {/* Section 03: Délégué */}
+            <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <span className="w-6 h-6 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold shrink-0">
                   03
                 </span>
                 <h4 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700">
-                  Configuration du Compte
+                  Délégué / Bénéficiaire (Optionnel)
                 </h4>
               </div>
-              <div className="space-y-3">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-600">
-                    Type de Compte
+                    Nom du délégué
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["Epargne", "Courant", "Credit"].map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() =>
-                          setValue("typeCompte", type, {
-                            shouldValidate: true,
-                          })
-                        }
-                        className={`p-2 sm:p-3 rounded-xl border-2 text-center transition-all text-[10px] sm:text-xs font-bold uppercase ${
-                          typeCompte === type
-                            ? "border-primary bg-primary/5 text-primary"
-                            : "border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:border-slate-200 dark:hover:border-slate-600"
-                        }`}
-                      >
-                        {type}
-                      </button>
-                    ))}
-                  </div>
-                  {errors.typeCompte && (
+                  <input
+                    type="text"
+                    {...register("delegue.nom")}
+                    placeholder="Nom Complet"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                  />
+                  {errors.delegue?.nom && (
                     <p className="text-red-500 text-[10px] mt-1">
-                      {errors.typeCompte.message}
+                      {errors.delegue.nom.message}
                     </p>
                   )}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">
+                    Téléphone
+                  </label>
+                  <input
+                    type="text"
+                    {...register("delegue.telephone")}
+                    placeholder="0812345678"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                  />
+                  {errors.delegue?.telephone && (
+                    <p className="text-red-500 text-[10px] mt-1">
+                      {errors.delegue.telephone.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">
+                    Relation
+                  </label>
+                  <select
+                    {...register("delegue.relation")}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                  >
+                    <option value="">Sélectionner</option>
+                    <option value="Conjoint(e)">Conjoint(e)</option>
+                    <option value="Enfant">Enfant</option>
+                    <option value="Frère/Sœur">Frère/Sœur</option>
+                    <option value="Parent">Parent</option>
+                    <option value="Cousin(e)">Cousin(e)</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                  {errors.delegue?.relation && (
+                    <p className="text-red-500 text-[10px] mt-1">
+                      {errors.delegue.relation.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-600">
+                    Pièce d&apos;identité
+                  </label>
+                  <input
+                    type="text"
+                    {...register("delegue.pieceIdentite")}
+                    placeholder="N° Carte d'électeur/Passport"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                  />
                 </div>
               </div>
             </div>
