@@ -57,17 +57,37 @@ export class MembersService {
     return fileName;
   }
 
-  async findAll(userId?: string) {
+  async findAll(params: { page?: number; pageSize?: number; userId?: string } = {}) {
+    const { page = 1, pageSize = 10, userId } = params;
+    const skip = (page - 1) * pageSize;
+
+    const where: any = {};
     if (userId) {
-      return this.prisma.membre.findMany({
-        where: { userId },
-        include: { delegues: true },
-      });
+      where.userId = userId;
     }
-    return this.prisma.membre.findMany({
-      orderBy: { dateAdhesion: 'desc' },
-      include: { delegues: true },
-    });
+
+    const [total, data] = await Promise.all([
+      this.prisma.membre.count({ where }),
+      this.prisma.membre.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { dateAdhesion: 'desc' },
+        include: { delegues: true },
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+        hasNextPage: page * pageSize < total,
+        hasPrevPage: page > 1,
+      },
+    };
   }
 
   async findOne(id: number) {
@@ -133,13 +153,10 @@ export class MembersService {
   async create(createMemberDto: CreateMemberDto) {
     const {
       numeroCompte,
-      userId,
       motDePasse,
       typeCompte,
       dateAdhesion,
       delegue,
-      montantInitial,
-      deviseInitial,
     } = createMemberDto;
 
     // Normaliser le type de compte pour la cohérence des stats
@@ -163,12 +180,20 @@ export class MembersService {
         throw new BadRequestException('Ce numéro de compte existe déjà');
     }
 
-    if (userId) {
-      const existingUser = await this.prisma.membre.findFirst({
-        where: { userId },
-      });
-      if (existingUser)
-        throw new BadRequestException('Cet userId est déjà utilisé');
+    // Vérifier l'unicité du userId (empreinte) pour le membre
+    if (createMemberDto.userId) {
+      const check = await this.checkUserId(createMemberDto.userId);
+      if (check.exists) {
+        throw new BadRequestException(`Cette empreinte est déjà enregistrée pour un autre ${check.where}`);
+      }
+    }
+
+    // Vérifier l'unicité du userId (empreinte) pour le délégué
+    if (delegue?.userId) {
+      const checkDelegue = await this.checkUserId(delegue.userId);
+      if (checkDelegue.exists) {
+        throw new BadRequestException(`L'empreinte du délégué est déjà enregistrée pour un autre ${checkDelegue.where}`);
+      }
     }
 
     // Gérer la section et le compte collectif
@@ -197,7 +222,7 @@ export class MembersService {
           typeCompte: typeNormalise, // Utiliser la valeur normalisée
           statut: createMemberDto.statut as PrismaStatutMembre,
           photoProfil: photoFileName,
-          userId: createMemberDto.userId,
+          userId: createMemberDto.userId || null, 
           dateAdhesion: new Date(dateAdhesion),
           motDePasse: hashedPassword,
           dateNaissance: createMemberDto.dateNaissance
@@ -207,19 +232,30 @@ export class MembersService {
         },
       });
 
-      // 1. Gérer le dépôt initial si présent
-      if (montantInitial && montantInitial > 0) {
-        await tx.epargne.create({
-          data: {
-            compte: membre.numeroCompte,
-            typeOperation: 'depot',
-            devise: (deviseInitial as any) || 'FC', // Utilisation de any si le type n'est pas trouvé
-            montant: montantInitial,
-            dateOperation: new Date(dateAdhesion),
-            description: "Dépôt initial à l'ouverture du compte",
+      // 1. Ajouter automatiquement les frais de création (2000 FC) au compte collectif
+      const sectionLetter = getSectionLetter(typeNormalise);
+      const compteCollectif = `COOP-${sectionLetter}-${yearAdh}-0000`;
+
+      await tx.epargne.create({
+        data: {
+          compte: compteCollectif,
+          typeOperation: 'depot',
+          devise: 'FC',
+          montant: 2000,
+          dateOperation: new Date(dateAdhesion),
+          description: `Cotisation de création - Membre ${finalNumeroCompte}`,
+        },
+      });
+
+      // Mettre à jour le solde du compte collectif
+      await tx.section.update({
+        where: { nom: typeNormalise },
+        data: {
+          solde: {
+            increment: 2000,
           },
-        });
-      }
+        },
+      });
 
       // 2. Gérer le délégué
       if (delegue) {
@@ -302,6 +338,25 @@ export class MembersService {
     });
     if (!membre) throw new NotFoundException('Membre non trouvé');
 
+    // Vérifier l'unicité du userId pour le membre si modifié
+    if (updateDto.userId && updateDto.userId !== membre.userId) {
+      const check = await this.checkUserId(updateDto.userId, id);
+      if (check.exists) {
+        throw new BadRequestException(`Cette empreinte est déjà enregistrée pour un autre ${check.where}`);
+      }
+    }
+
+    // Vérifier l'unicité du userId pour le délégué si fourni
+    if (updateDto.delegue?.userId) {
+      const currentDelegueId = membre.delegues[0]?.userId;
+      if (updateDto.delegue.userId !== currentDelegueId) {
+        const check = await this.checkUserId(updateDto.delegue.userId, id);
+        if (check.exists) {
+          throw new BadRequestException(`L'empreinte du délégué est déjà enregistrée pour un autre ${check.where}`);
+        }
+      }
+    }
+
     const data: Prisma.MembreUpdateInput = {};
 
     if (updateDto.motDePasse) {
@@ -319,7 +374,6 @@ export class MembersService {
     if (updateDto.sexe) data.sexe = updateDto.sexe;
     if (updateDto.statut) data.statut = updateDto.statut as PrismaStatutMembre;
     if (updateDto.typeCompte) data.typeCompte = updateDto.typeCompte;
-    if (updateDto.userId !== undefined) data.userId = updateDto.userId;
     if (updateDto.dateAdhesion)
       data.dateAdhesion = new Date(updateDto.dateAdhesion);
     if (updateDto.dateNaissance !== undefined)

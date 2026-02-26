@@ -14,6 +14,8 @@ import { RemboursementsModule } from './remboursements/remboursements.module';
 import { AdminsModule } from './admins/admins.module';
 import { ReportsModule } from './reports/reports.module';
 import { ZktecoModule } from './zkteco/zkteco.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -30,6 +32,10 @@ import { ZktecoModule } from './zkteco/zkteco.module';
     AdminsModule,
     ReportsModule,
     ZktecoModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -46,7 +46,7 @@ export default function MemberTableRow({
         <div className="relative w-10 h-10 rounded-full overflow-hidden shadow-sm shrink-0 bg-primary/10 flex items-center justify-center">
           {member.photoProfil ? (
             <img
-              src={member.photoProfil}
+              src={member.photoProfil.startsWith('data:') ? member.photoProfil : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/uploads/${member.photoProfil}`}
               alt={member.nomComplet}
               className="object-cover w-full h-full"
             />

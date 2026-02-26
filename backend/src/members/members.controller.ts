@@ -11,14 +11,23 @@ import {
 } from '@nestjs/common';
 import { MembersService } from './members.service';
 import { CreateMemberDto } from './dto/create-member.dto';
+import { getSectionLetter, normalizeSectionName } from '../common/constants/sections';
 
 @Controller('api/membres')
 export class MembersController {
   constructor(private readonly membersService: MembersService) {}
 
   @Get()
-  async findAll(@Query('userId') userId?: string) {
-    return this.membersService.findAll(userId);
+  async findAll(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('userId') userId?: string,
+  ) {
+    return this.membersService.findAll({
+      page: page ? parseInt(page) : 1,
+      pageSize: pageSize ? parseInt(pageSize) : 10,
+      userId,
+    });
   }
 
   @Get('stats')
@@ -28,8 +37,8 @@ export class MembersController {
 
   @Get('numeros')
   async getNumeros() {
-    const membres = await this.membersService.findAll();
-    return membres.map((m) => ({
+    const response = await this.membersService.findAll({ pageSize: 1000 });
+    return response.data.map((m) => ({
       id: m.id,
       numero_compte: m.numeroCompte,
       nom_complet: m.nomComplet,
@@ -42,8 +51,9 @@ export class MembersController {
     @Query('section') section?: string,
   ) {
     const y = year ? parseInt(year) : new Date().getFullYear();
-    const numero_compte = await this.membersService.generateNumero(y, section);
-    return { numero_compte };
+    const sectionLetter = section ? getSectionLetter(normalizeSectionName(section)) : undefined;
+    const numero = await this.membersService.generateNumero(y, sectionLetter);
+    return { numero };
   }
 
   @Get('last-numero')
@@ -52,7 +62,8 @@ export class MembersController {
     @Query('section') section?: string,
   ) {
     const y = year ? parseInt(year) : new Date().getFullYear();
-    const numero_compte = await this.membersService.generateNumero(y, section);
+    const sectionLetter = section ? getSectionLetter(normalizeSectionName(section)) : undefined;
+    const numero_compte = await this.membersService.generateNumero(y, sectionLetter);
     const match = numero_compte.match(/-(\d{4})$/);
     const nextNumber = match ? parseInt(match[1]) : 1;
     return { nextNumber };

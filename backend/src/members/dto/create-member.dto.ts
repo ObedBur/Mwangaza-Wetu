@@ -89,10 +89,6 @@ export class CreateMemberDto {
 
   @IsString()
   @IsOptional()
-  userId?: string;
-
-  @IsString()
-  @IsOptional()
   @MinLength(4)
   motDePasse?: string;
 
@@ -104,13 +100,9 @@ export class CreateMemberDto {
   @IsOptional()
   idNationale?: string;
 
-  @IsNumber()
-  @IsOptional()
-  montantInitial?: number;
-
   @IsString()
   @IsOptional()
-  deviseInitial?: string;
+  userId?: string;
 
   @IsOptional()
   @ValidateNested()

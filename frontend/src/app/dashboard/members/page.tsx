@@ -14,7 +14,7 @@ export default function MembersPage() {
   const { mutateAsync: createMember } = useCreateMember();
   const { success: toastSuccess, error: toastError } = useToast();
 
-  const handleCreateMember = async (data: MemberInput) => {
+  const handleCreateMemberSubmit = async (data: MemberInput) => {
     try {
       const response = await createMember(data);
       setIsModalOpen(false);
@@ -35,19 +35,26 @@ export default function MembersPage() {
     console.log("Action clicked for member:", memberId);
   };
 
+  const handleCreateMemberModal = () => {
+    setIsModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
-      <MembersHeader onCreateClick={() => setIsModalOpen(true)} />
+      <MembersHeader onCreateClick={handleCreateMemberModal} />
 
       <div className="grid gap-6">
         <MembersStatsSection />
-        <MembersTable onActionClick={handleMemberAction} />
+        <MembersTable 
+          onActionClick={handleMemberAction} 
+          onCreateMember={handleCreateMemberModal}
+        />
       </div>
 
       <CreateMemberModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSubmit={handleCreateMember}
+        onSubmit={handleCreateMemberSubmit}
       />
     </div>
   );

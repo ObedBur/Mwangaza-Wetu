@@ -5,6 +5,7 @@ import MemberTableRow from "./MemberTableRow";
 import { useMembers } from "@/hooks/useMembers";
 import { TableSkeleton } from "@/components/ui/TableSkeleton";
 import Pagination from "@/components/ui/Pagination";
+import { MembersEmptyState, ServerErrorState } from "@/components/ui/empty-state";
 import {
   Filter,
   Download,
@@ -19,9 +20,10 @@ const DEFAULT_PAGE_SIZE = 10;
 
 interface MembersTableProps {
   onActionClick: (memberId: number) => void;
+  onCreateMember?: () => void;
 }
 
-export default function MembersTable({ onActionClick }: MembersTableProps) {
+export default function MembersTable({ onActionClick, onCreateMember }: MembersTableProps) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
@@ -31,6 +33,8 @@ export default function MembersTable({ onActionClick }: MembersTableProps) {
     isError,
     error,
     refetch,
+    isEmpty,
+    isServerError,
   } = useMembers({
     page,
     pageSize,
@@ -39,27 +43,41 @@ export default function MembersTable({ onActionClick }: MembersTableProps) {
   const membersList = response?.data ?? [];
   const meta = response?.meta;
 
-  if (isError) {
+  // État de chargement
+  if (isLoading) {
     return (
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-red-100 dark:border-red-900/30 p-16 flex flex-col items-center justify-center text-center">
-        <div className="h-16 w-16 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
-          <AlertCircle className="h-8 w-8 text-red-500" />
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="p-4 sm:p-6 border-b border-slate-200 dark:border-slate-800">
+          <div className="animate-pulse">
+            <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+          </div>
         </div>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-          Erreur de chargement
-        </h3>
-        <p className="text-slate-500 dark:text-slate-400 max-w-xs mb-6">
-          {error instanceof Error
-            ? error.message
-            : "Impossible de récupérer les membres pour le moment."}
-        </p>
-        <button
-          onClick={() => refetch()}
-          className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold transition-all shadow-lg shadow-primary/20"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Réessayer
-        </button>
+        <TableSkeleton />
+      </div>
+    );
+  }
+
+  // Erreur serveur (500)
+  if (isServerError) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+        <ServerErrorState 
+          onRetry={() => refetch()} 
+          isRetrying={isLoading}
+        />
+      </div>
+    );
+  }
+
+  // Autres erreurs (404, réseau, etc.) - on affiche l'état vide
+  if (isError || isEmpty) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6">
+        <MembersEmptyState 
+          onCreateMember={onCreateMember}
+          onRetry={() => refetch()} 
+          isRetrying={isLoading}
+        />
       </div>
     );
   }
@@ -118,37 +136,13 @@ export default function MembersTable({ onActionClick }: MembersTableProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {membersList.length > 0 ? (
-              membersList.map((member) => (
-                <MemberTableRow
-                  key={member.id}
-                  member={member}
-                  onActionClick={onActionClick}
-                />
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 sm:px-6 py-12 sm:py-16 text-center"
-                >
-                  <div className="flex flex-col items-center justify-center gap-3 sm:gap-4">
-                    <div className="p-3 sm:p-4 bg-slate-100 dark:bg-slate-800 rounded-full">
-                      <Users className="w-6 sm:w-8 h-6 sm:h-8 text-slate-400" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-sm sm:text-base text-slate-700 dark:text-slate-300">
-                        Aucun membre trouvé
-                      </h4>
-                      <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
-                        Commencez par ajouter un nouveau membre à votre
-                        coopérative
-                      </p>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            )}
+            {membersList.map((member) => (
+              <MemberTableRow
+                key={member.id}
+                member={member}
+                onActionClick={onActionClick}
+              />
+            ))}
           </tbody>
         </table>
       </div>

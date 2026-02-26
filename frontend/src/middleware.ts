@@ -8,6 +8,18 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
   const { pathname } = request.nextUrl;
 
+  // ✅ Gestion des requêtes API (CORS et proxy)
+  if (pathname.startsWith('/api/')) {
+    const response = NextResponse.next();
+    
+    // Headers CORS pour le développement
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    return response;
+  }
+
   // ✅ Protection des routes dashboard
   if (pathname.startsWith(PROTECTED_PREFIX)) {
     if (!token) {
@@ -44,5 +56,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/'],
+  matcher: ['/dashboard/:path*', '/', '/api/:path*'],
 };

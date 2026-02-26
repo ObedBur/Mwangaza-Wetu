@@ -10,6 +10,16 @@ const nextConfig: NextConfig = {
     ],
   },
   
+  // ✅ Configuration du proxy pour les API
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:3000/api/:path*', // Backend sur port 3000
+      },
+    ];
+  },
+  
   // ✅ Headers de sécurité
   async headers() {
     return [

@@ -1,6 +1,6 @@
 ### Configuration
 @baseUrl = http://localhost:3000
-@controller = zkteco
+@controller = api/zkteco
 
 # ==========================================
 # 1. GESTION DE LA CONNEXION (Étape obligatoire)

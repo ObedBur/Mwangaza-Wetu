@@ -15,7 +15,7 @@ export const memberSchema = z.object({
   typeCompte: z.string().min(1, "Le type de compte est requis"),
   statut: z.enum(["actif", "inactif"]).default("actif"),
   photoProfil: z.string().optional(),
-  userId: z.string().optional(),
+  userId: z.string().optional(), // ID Biométrique ZKTeco
   motDePasse: z.string().min(4, "Le mot de passe doit contenir au moins 4 caractères").optional(),
   dateNaissance: z.string().optional(),
   idNationale: z.string().optional(),
@@ -24,6 +24,8 @@ export const memberSchema = z.object({
     telephone: z.string().optional().or(z.literal("")),
     relation: z.string().optional().or(z.literal("")),
     pieceIdentite: z.string().optional().or(z.literal("")),
+    userId: z.string().optional(), // ID Biométrique ZKTeco pour le délégué
+    photoProfil: z.string().optional(),
   }).optional(),
 });
 

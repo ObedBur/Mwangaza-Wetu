@@ -1,12 +1,82 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X, Fingerprint, Loader2, Hash } from "lucide-react";
+import { X, Fingerprint, Loader2, Hash, User, Calendar, MapPin, DollarSign, Users, UserPlus, Info, CheckCircle, AlertCircle, Camera, Upload, Trash2 } from "lucide-react";
 import { memberSchema, MemberInput } from "@/lib/validations";
 import { useGenerateAccountNumber } from "@/hooks/useMembers";
+import { useZkTeco } from "@/hooks/useZkTeco";
 import { ACCOUNT_TYPES } from "@/lib/constants";
+
+// Composant de téléchargement de photo premium
+const PhotoUpload = ({
+  label,
+  value,
+  onChange,
+  id
+}: {
+  label: string;
+  value?: string;
+  onChange: (val: string) => void;
+  id: string
+}) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("L'image est trop lourde (max 2Mo)");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onChange(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-2 shrink-0">
+      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</label>
+      <div className="relative group">
+        <div className={`w-24 h-24 rounded-2xl border-2 border-dashed transition-all flex items-center justify-center overflow-hidden bg-white dark:bg-slate-800 ${value ? "border-primary/50 shadow-lg shadow-primary/5" : "border-slate-200 dark:border-slate-700 hover:border-primary/50"
+          }`}>
+          {value ? (
+            <img src={value} alt="Preview" className="w-full h-full object-cover animate-in fade-in zoom-in duration-300" />
+          ) : (
+            <Camera className="w-8 h-8 text-slate-300 group-hover:text-primary/50 transition-colors" />
+          )}
+
+          <label
+            htmlFor={id}
+            className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <Upload className="w-6 h-6 text-white" />
+          </label>
+        </div>
+
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors active:scale-90"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+      <input
+        type="file"
+        id={id}
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      <p className="text-[9px] text-slate-400 italic">Clic pour changer</p>
+    </div>
+  );
+};
 
 interface CreateMemberModalProps {
   isOpen: boolean;
@@ -19,6 +89,16 @@ export default function CreateMemberModal({
   onClose,
   onSubmit,
 }: CreateMemberModalProps) {
+  const [showDelegue, setShowDelegue] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+
+  // États pour les photos (base64)
+  const [memberPhoto, setMemberPhoto] = useState<string>("");
+  const [deleguePhoto, setDeleguePhoto] = useState<string>("");
+
+  const { isScanning, scanStatus, scanError, userId, scanFingerprint } = useZkTeco();
+  const delegueZk = useZkTeco();
+
   const {
     register,
     handleSubmit,
@@ -35,7 +115,7 @@ export default function CreateMemberModal({
       adresse: "",
       idNationale: "",
       sexe: undefined,
-      typeCompte: "Epargne",
+      typeCompte: "PRINCIPAL",
       statut: "actif",
       dateAdhesion: new Date().toISOString().split("T")[0],
     },
@@ -44,27 +124,151 @@ export default function CreateMemberModal({
   const typeCompte = watch("typeCompte");
   const dateAdhesion = watch("dateAdhesion");
 
+  // Synchronisation des photos avec le formulaire
+  useEffect(() => {
+    setValue("photoProfil", memberPhoto || undefined);
+  }, [memberPhoto, setValue]);
+
+  useEffect(() => {
+    if (showDelegue) {
+      setValue("delegue.photoProfil", deleguePhoto || undefined);
+    }
+  }, [deleguePhoto, showDelegue, setValue]);
+
   // Hook pour générer le numéro de compte en temps réel
   const { data: generatedNumero, isLoading: isGenerating } =
     useGenerateAccountNumber(typeCompte, dateAdhesion);
 
   // Mettre à jour le champ numeroCompte du formulaire quand le backend répond
   useEffect(() => {
-    if (generatedNumero) {
+    if (generatedNumero && typeof generatedNumero === 'string') {
       setValue("numeroCompte", generatedNumero);
     }
   }, [generatedNumero, setValue]);
 
+  // Synchronisation des IDs biométriques avec le formulaire
+  useEffect(() => {
+    if (userId) setValue("userId", userId);
+  }, [userId, setValue]);
+
+  useEffect(() => {
+    if (delegueZk.userId) setValue("delegue.userId", delegueZk.userId);
+  }, [delegueZk.userId, setValue]);
+
+  // Empêcher d'avoir le même ID pour le membre et le délégué
+  useEffect(() => {
+    if (userId && delegueZk.userId && userId === delegueZk.userId) {
+      alert("Le membre et le délégué ne peuvent pas avoir la même empreinte !");
+      delegueZk.reset();
+      setValue("delegue.userId", "");
+    }
+  }, [userId, delegueZk.userId, delegueZk, setValue]);
+
   const handleFormSubmit = (data: MemberInput) => {
-    // Nettoyer le délégué s'il est vide
-    if (data.delegue && !data.delegue.nom) {
+    // Nettoyer le délégué s'il est vide (ni nom, ni ID)
+    if (data.delegue && !data.delegue.nom && !data.delegue.userId && !data.delegue.photoProfil) {
       delete data.delegue;
     }
     onSubmit(data);
     reset();
-  };;
+    setMemberPhoto("");
+    setDeleguePhoto("");
+  };
 
   if (!isOpen) return null;
+
+  // Composant réutilisable pour l'interface de scan ZKTeco
+  const ZkScanUI = ({
+    status,
+    error,
+    id,
+    scanning,
+    onScan,
+    label
+  }: {
+    status: string,
+    error: string | null,
+    id: string | null,
+    scanning: boolean,
+    onScan: () => void,
+    label: string
+  }) => (
+    <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Capture : {label}
+        </label>
+        {status === 'success' && (
+          <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+            <CheckCircle className="w-3 h-3" /> PRÊT
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {status === 'idle' && (
+          <button
+            type="button"
+            onClick={onScan}
+            disabled={scanning}
+            className="w-full py-2.5 px-4 rounded-lg bg-slate-900 dark:bg-primary hover:bg-slate-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+          >
+            <Fingerprint className="w-4 h-4" />
+            {scanning ? 'Lecture...' : `Scanner ${label}`}
+          </button>
+        )}
+
+        {status === 'scanning' && (
+          <div className="bg-primary/5 rounded-lg p-4 border-2 border-dashed border-primary/20 flex flex-col items-center justify-center gap-2 animate-pulse">
+            <Fingerprint className="w-8 h-8 text-primary" />
+            <div className="text-center">
+              <span className="text-[10px] font-black text-primary block uppercase">En attente du doigt...</span>
+              <span className="text-[9px] text-slate-500">Posez le doigt sur le lecteur</span>
+            </div>
+          </div>
+        )}
+
+        {status === 'success' && id && (
+          <div className="flex items-center justify-between gap-3 bg-green-50/50 dark:bg-green-900/10 p-3 rounded-lg border border-green-100 dark:border-green-900/30">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-green-800 dark:text-green-300 uppercase">Capturée</p>
+                <p className="text-[11px] font-mono text-green-600 font-bold">ID: {id}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onScan}
+              className="text-[9px] font-black underline uppercase text-green-700 hover:text-green-800"
+            >
+              Refaire
+            </button>
+          </div>
+        )}
+
+        {status === 'error' && (
+          <div className="bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-900/30">
+            <div className="flex items-start gap-3 mb-3">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] font-bold text-red-700 dark:text-red-400 leading-tight">
+                {error || "Placez le doigt encore ou réessayez"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onScan}
+              className="w-full py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] transition-all uppercase"
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -84,7 +288,7 @@ export default function CreateMemberModal({
                 Nouveau Membre
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-500">
-                Completez tous les champs requis
+                Complétez tous les champs requis
               </p>
             </div>
             <button
@@ -98,317 +302,418 @@ export default function CreateMemberModal({
           {/* Form Content */}
           <form
             onSubmit={handleSubmit(handleFormSubmit)}
-            className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-6 sm:space-y-8"
+            className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-6"
           >
-            {/* Section 1: Identity */}
+            {/* Section 01: Type de Compte */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <span className="w-6 h-6 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold shrink-0">
                   01
                 </span>
                 <h4 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700">
-                  Détails de l&apos;identité
+                  Type de Compte
                 </h4>
               </div>
+
               <div className="space-y-3">
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Type de Compte
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {ACCOUNT_TYPES.map((type) => (
-                        <button
-                          key={type.value}
-                          type="button"
-                          onClick={() =>
-                            setValue("typeCompte", type.value, {
-                              shouldValidate: true,
-                            })
-                          }
-                          className={`p-2 sm:p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 ${
-                            typeCompte === type.value
-                              ? "border-primary bg-primary/5 text-primary"
-                              : "border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:border-slate-200 dark:hover:border-slate-600"
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-600">
+                    Sélectionnez le type de compte
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {ACCOUNT_TYPES.map((type) => (
+                      <button
+                        key={type.value}
+                        type="button"
+                        onClick={() =>
+                          setValue("typeCompte", type.value, {
+                            shouldValidate: true,
+                          })
+                        }
+                        className={`p-2 sm:p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 ${typeCompte === type.value
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:border-slate-200 dark:hover:border-slate-600"
                           }`}
-                        >
-                          <span className="text-[10px] font-black leading-none">
-                            COOP-{type.prefix}
-                          </span>
-                          <span className="text-[10px] sm:text-xs font-bold uppercase truncate">
-                            {type.label}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                    {errors.typeCompte && (
-                      <p className="text-red-500 text-[10px] mt-1">
-                        {errors.typeCompte.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Affichage du Numéro de Compte Suggéré */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                      <Hash className="w-3 h-3 text-primary" />
-                      Numéro de compte attribué
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        {...register("numeroCompte")}
-                        readOnly
-                        placeholder="Génération en cours..."
-                        className="w-full bg-primary/5 border border-primary/20 rounded-lg text-xs sm:text-sm p-2.5 font-mono font-bold text-primary cursor-default outline-none"
-                      />
-                      {isGenerating && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-slate-500 italic">
-                      Ce numéro est généré automatiquement selon la section et
-                      l&apos;année.
-                    </p>
+                      >
+                        <span className="text-[10px] font-black leading-none">
+                          COOP-{type.prefix}
+                        </span>
+                        <span className="text-[10px] sm:text-xs font-bold uppercase truncate">
+                          {type.label}
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
+                {/* Numéro de compte généré */}
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Nom complet
+                  <label className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                    <Hash className="w-3 h-3 text-primary" />
+                    Numéro de compte attribué
                   </label>
-                  <input
-                    type="text"
-                    {...register("nomComplet")}
-                    placeholder="e.g. Jean Kabila"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
-                  />
-                  {errors.nomComplet && (
-                    <p className="text-red-500 text-[10px] mt-1">
-                      {errors.nomComplet.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Email (Optionnel)
-                  </label>
-                  <input
-                    type="email"
-                    {...register("email")}
-                    placeholder="jean@example.com"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
-                  />
-                  {errors.email && (
-                    <p className="text-red-500 text-[10px] mt-1">
-                      {errors.email.message}
-                    </p>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-600">
-                      ID Nationale
-                    </label>
+                  <div className="relative">
                     <input
                       type="text"
-                      {...register("idNationale")}
-                      placeholder="00000000000"
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                      {...register("numeroCompte")}
+                      readOnly
+                      placeholder="Génération en cours..."
+                      className="w-full bg-primary/5 border border-primary/20 rounded-lg text-xs sm:text-sm p-2.5 font-mono font-bold text-primary cursor-default outline-none"
                     />
-                    {errors.idNationale && (
-                      <p className="text-red-500 text-[10px] mt-1">
-                        {errors.idNationale.message}
-                      </p>
+                    {isGenerating && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                      </div>
                     )}
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-600">
-                      Téléphone
-                    </label>
-                    <input
-                      type="text"
-                      {...register("telephone")}
-                      placeholder="0812345678"
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
-                    />
-                    {errors.telephone && (
-                      <p className="text-red-500 text-[10px] mt-1">
-                        {errors.telephone.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Sexe
-                  </label>
-                  <select
-                    {...register("sexe")}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="F">Féminin</option>
-                    <option value="M">Masculin</option>
-                  </select>
-                  {errors.sexe && (
-                    <p className="text-red-500 text-[10px] mt-1">
-                      {errors.sexe.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Date d&apos;adhésion
-                  </label>
-                  <input
-                    type="date"
-                    {...register("dateAdhesion")}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
-                  />
-                  {errors.dateAdhesion && (
-                    <p className="text-red-500 text-[10px] mt-1">
-                      {errors.dateAdhesion.message}
-                    </p>
-                  )}
+                  <p className="text-[10px] text-slate-500 italic">
+                    Ce numéro est généré automatiquement selon la section et l'année.
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Section 2: Security & Biometrics */}
+            {/* Section 02: Identité du Membre */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <span className="w-6 h-6 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold shrink-0">
                   02
                 </span>
                 <h4 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700">
-                  Inscription de Sécurité
+                  Identité du Membre
                 </h4>
               </div>
-              <div className="p-4 sm:p-6 bg-primary/5 dark:bg-primary/10 rounded-2xl border border-primary/10 dark:border-primary/20 flex flex-col items-center text-center space-y-4">
-                <div className="relative">
-                  <div className="w-16 sm:w-20 h-16 sm:h-20 rounded-full border-2 border-primary/20 flex items-center justify-center text-primary bg-white dark:bg-slate-800 shadow-inner">
-                    <Fingerprint className="w-8 sm:w-10 h-8 sm:h-10 animate-pulse" />
+
+              <div className="flex flex-col sm:flex-row gap-6 items-start bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                <PhotoUpload
+                  label="Photo Membre"
+                  value={memberPhoto}
+                  onChange={setMemberPhoto}
+                  id="member-photo-upload"
+                />
+
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-600">
+                        Nom complet *
+                      </label>
+                      <input
+                        type="text"
+                        {...register("nomComplet")}
+                        placeholder="e.g. Jean Kabila"
+                        className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                      />
+                      {errors.nomComplet && (
+                        <p className="text-red-500 text-[10px] mt-1">
+                          {errors.nomComplet.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-600">
+                        Téléphone *
+                      </label>
+                      <input
+                        type="text"
+                        {...register("telephone")}
+                        placeholder="0812345678"
+                        className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                      />
+                      {errors.telephone && (
+                        <p className="text-red-500 text-[10px] mt-1">
+                          {errors.telephone.message}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-1 w-full text-left">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Adresse physique
-                  </label>
-                  <textarea
-                    {...register("adresse")}
-                    placeholder="Bâtiment, Rue, Quartier"
-                    rows={2}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all resize-none"
-                  />
-                  {errors.adresse && (
-                    <p className="text-red-500 text-[10px] mt-1">
-                      {errors.adresse.message}
-                    </p>
-                  )}
+
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-600">
+                        Sexe *
+                      </label>
+                      <select
+                        {...register("sexe")}
+                        className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                      >
+                        <option value="">Sélectionner</option>
+                        <option value="F">Féminin</option>
+                        <option value="M">Masculin</option>
+                      </select>
+                      {errors.sexe && (
+                        <p className="text-red-500 text-[10px] mt-1">
+                          {errors.sexe.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-slate-600">
+                        Date d'adhésion *
+                      </label>
+                      <input
+                        type="date"
+                        {...register("dateAdhesion")}
+                        className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Section 03: Délégué */}
+            {/* Section 03: Coordonnées & Options */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
                 <span className="w-6 h-6 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold shrink-0">
                   03
                 </span>
                 <h4 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700">
-                  Délégué / Bénéficiaire (Optionnel)
+                  Coordonnées & Plus
                 </h4>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-600">
-                    Nom du délégué
+                    Adresse physique
                   </label>
-                  <input
-                    type="text"
-                    {...register("delegue.nom")}
-                    placeholder="Nom Complet"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                  <textarea
+                    {...register("adresse")}
+                    placeholder="Bâtiment, Rue, Quartier, Ville"
+                    rows={2}
+                    className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all resize-none"
                   />
-                  {errors.delegue?.nom && (
-                    <p className="text-red-500 text-[10px] mt-1">
-                      {errors.delegue.nom.message}
-                    </p>
-                  )}
                 </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-slate-600">
-                    Téléphone
+                    ID Nationale / Pièce ID
                   </label>
                   <input
                     type="text"
-                    {...register("delegue.telephone")}
-                    placeholder="0812345678"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
-                  />
-                  {errors.delegue?.telephone && (
-                    <p className="text-red-500 text-[10px] mt-1">
-                      {errors.delegue.telephone.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Relation
-                  </label>
-                  <select
-                    {...register("delegue.relation")}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="Conjoint(e)">Conjoint(e)</option>
-                    <option value="Enfant">Enfant</option>
-                    <option value="Frère/Sœur">Frère/Sœur</option>
-                    <option value="Parent">Parent</option>
-                    <option value="Cousin(e)">Cousin(e)</option>
-                    <option value="Autre">Autre</option>
-                  </select>
-                  {errors.delegue?.relation && (
-                    <p className="text-red-500 text-[10px] mt-1">
-                      {errors.delegue.relation.message}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-slate-600">
-                    Pièce d&apos;identité
-                  </label>
-                  <input
-                    type="text"
-                    {...register("delegue.pieceIdentite")}
-                    placeholder="N° Carte d'électeur/Passport"
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                    {...register("idNationale")}
+                    placeholder="00000000000"
+                    className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
+
+              <div className="flex items-center justify-between py-2">
+                <button
+                  type="button"
+                  className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
+                  onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                >
+                  {showAdvancedOptions ? "- Moins d'options" : "+ Plus d'options (Naissance, Password)"}
+                </button>
+              </div>
+
+              {showAdvancedOptions && (
+                <div className="bg-slate-50 dark:bg-slate-800/30 p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-600">
+                      Date de naissance
+                    </label>
+                    <input
+                      type="date"
+                      {...register("dateNaissance")}
+                      className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-600">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      {...register("email")}
+                      placeholder="email@example.com"
+                      className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
-            {/* Footer */}
-            <div className="p-4 sm:p-6 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-3 sticky bottom-0">
-              <button
-                type="button"
-                onClick={onClose}
-                className="py-2 sm:py-3 px-3 sm:px-4 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold text-xs sm:text-sm bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 min-h-[44px]"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="py-2 sm:py-3 px-3 sm:px-4 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:hover:bg-primary text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 min-h-[44px] flex items-center justify-center gap-2"
-              >
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSubmitting ? "Création..." : "Créer Membre"}
-              </button>
+
+            {/* Section 04: Biométrie & Finance */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-6 h-6 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold shrink-0">
+                  04
+                </span>
+                <h4 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700">
+                  Biométrie & Frais
+                </h4>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
+                  <ZkScanUI
+                    status={scanStatus}
+                    error={scanError}
+                    id={userId}
+                    scanning={isScanning}
+                    onScan={scanFingerprint}
+                    label="Membre Titulaire"
+                  />
+                </div>
+
+                <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 rounded-xl p-4 flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="w-4 h-4 text-orange-600" />
+                    <span className="text-xs font-bold text-orange-800 dark:text-orange-300 uppercase">Frais d'Adhésion</span>
+                  </div>
+                  <p className="text-[10px] text-orange-700 dark:text-orange-400 mb-3 leading-tight">
+                    Une cotisation de 2 000 FC sera déduite pour le compte collectif.
+                  </p>
+                  <div className="text-2xl font-black text-orange-600">2 000 FC</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 05: Délégué */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-6 h-6 rounded-full bg-primary text-white text-[10px] flex items-center justify-center font-bold shrink-0">
+                  05
+                </span>
+                <h4 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-slate-700">
+                  Délégué (Optionnel)
+                </h4>
+              </div>
+
+              {!showDelegue ? (
+                <button
+                  type="button"
+                  onClick={() => setShowDelegue(true)}
+                  className="w-full py-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col items-center gap-2 text-slate-400 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                >
+                  <UserPlus className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Ajouter un délégué autorisé</span>
+                </button>
+              ) : (
+                <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="flex flex-col sm:flex-row gap-6 items-start bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <PhotoUpload
+                      label="Photo Délégué"
+                      value={deleguePhoto}
+                      onChange={setDeleguePhoto}
+                      id="delegue-photo-upload"
+                    />
+
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">
+                              Nom du délégué *
+                            </label>
+                            <input
+                              type="text"
+                              {...register("delegue.nom")}
+                              placeholder="Nom Complet"
+                              className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-600">
+                              Relation *
+                            </label>
+                            <select
+                              {...register("delegue.relation")}
+                              className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                            >
+                              <option value="">Sélectionner</option>
+                              <option value="Conjoint(e)">Conjoint(e)</option>
+                              <option value="Enfant">Enfant</option>
+                              <option value="Frère/Sœur">Frère/Sœur</option>
+                              <option value="Parent">Parent</option>
+                              <option value="Cousin(e)">Cousin(e)</option>
+                              <option value="Autre">Autre</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-600">
+                              Téléphone
+                            </label>
+                            <input
+                              type="text"
+                              {...register("delegue.telephone")}
+                              placeholder="0812345678"
+                              className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-600">
+                              Pièce ID
+                            </label>
+                            <input
+                              type="text"
+                              {...register("delegue.pieceIdentite")}
+                              placeholder="N° Carte / Passport"
+                              className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <ZkScanUI
+                        status={delegueZk.scanStatus}
+                        error={delegueZk.scanError}
+                        id={delegueZk.userId}
+                        scanning={delegueZk.isScanning}
+                        onScan={delegueZk.scanFingerprint}
+                        label="Délégué"
+                      />
+
+                      <div className="flex items-center justify-center p-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowDelegue(false);
+                            setDeleguePhoto("");
+                          }}
+                          className="text-[10px] font-black uppercase text-red-500 hover:text-red-600 tracking-widest flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" /> Annuler le délégué
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+              )}
             </div>
           </form>
+
+          {/* Footer - Fixed Bottom */}
+          <div className="p-4 sm:p-6 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-3 sticky bottom-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="py-2.5 sm:py-3.5 px-4 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold text-xs sm:text-sm bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shadow-sm"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              form="create-member-form" // On lie au bouton si nécéssaire, ou on garde handleSubmit
+              onClick={handleSubmit(handleFormSubmit)} // Déclenchement manuel si hors scope form
+              disabled={isSubmitting}
+              className="py-2.5 sm:py-3.5 px-4 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:hover:bg-primary text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 flex items-center justify-center gap-2"
+            >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {isSubmitting ? "Création..." : "Enregistrer Membre"}
+            </button>
+          </div>
         </div>
       </div>
     </>

@@ -8,12 +8,11 @@ datasource db {
 
 model Attendance {
   id        Int      @id @default(autoincrement())
-  uid       String
   timestamp DateTime
+  createdAt DateTime @default(now())
+  uid       String
   membreId  Int?
   membre    Membre?  @relation(fields: [membreId], references: [id])
-
-  createdAt DateTime @default(now())
 }
 
 model Membre {
@@ -34,12 +33,12 @@ model Membre {
   idNationale    String?         @map("id_nationale")
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
+  attendances    Attendance[]
   comptesEpargne CompteEpargne[]
   credits        Credit[]
   delegues       Delegue[]
   epargnes       Epargne[]
   retraits       Retrait[]
-  attendances Attendance[] 
 
   @@map("membres")
 }

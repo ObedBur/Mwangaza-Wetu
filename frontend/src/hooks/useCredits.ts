@@ -17,22 +17,69 @@ export interface FetchCreditsParams {
  * Route backend : GET /api/credits
  */
 const fetchCredits = async (params: FetchCreditsParams): Promise<PaginatedResponse<CreditRecord>> => {
-  const { data } = await apiClient.get<PaginatedResponse<CreditRecord>>(API_ROUTES.CREDITS, {
-    params
-  });
-  return data;
+  try {
+    const { data } = await apiClient.get<PaginatedResponse<CreditRecord>>(API_ROUTES.CREDITS, {
+      params
+    });
+    return data;
+  } catch (error: any) {
+    console.error('Erreur lors de la récupération des crédits:', error);
+    
+    // Si c'est une erreur 500, on la propage
+    if (error.response?.status === 500) {
+      throw new Error('Erreur serveur: Le service est temporairement indisponible');
+    }
+    
+    // Pour les autres erreurs, on retourne des données vides
+    return {
+      data: [],
+      meta: {
+        total: 0,
+        page: params.page || 1,
+        pageSize: params.pageSize || 10,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+      }
+    };
+  }
 };
 
 const createCredit = async (payload: LoanInput): Promise<CreditRecord> => {
-  const { data } = await apiClient.post<CreditRecord>(API_ROUTES.CREDITS, payload);
-  return data;
+  try {
+    const { data } = await apiClient.post<CreditRecord>(API_ROUTES.CREDITS, payload);
+    return data;
+  } catch (error) {
+    console.error('Erreur lors de la création du crédit:', error);
+    throw new Error('Impossible de créer ce crédit. Veuillez réessayer.');
+  }
 };
 
 export const useCredits = (params: FetchCreditsParams = { page: 1, pageSize: 10 }) => {
-  return useQuery({
+  const query = useQuery({
     queryKey: ['credits', params],
     queryFn: () => fetchCredits(params),
+    retry: (failureCount, error) => {
+      if (error instanceof Error && error.message.includes('Erreur serveur')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
+
+  const refetch = () => {
+    query.refetch();
+  };
+
+  return {
+    ...query,
+    refetch,
+    isEmpty: !query.isLoading && !query.isError && (!query.data?.data || query.data.data.length === 0),
+    isServerError: query.isError && query.error instanceof Error && query.error.message.includes('Erreur serveur'),
+  };
 };
 
 export const useCreateCredit = () => {
