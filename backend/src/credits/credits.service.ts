@@ -35,17 +35,19 @@ export class CreditsService {
   }
 
   async getSoldes() {
-    const credits = await this.prisma.credit.findMany({
-      select: { montant: true, devise: true },
+    const results = await this.prisma.credit.groupBy({
+      by: ['devise'],
+      _sum: {
+        montant: true,
+      },
     });
-    const soldeUSD = credits
-      .filter((c) => c.devise === 'USD')
-      .reduce((t, c) => t + (c.montant || 0), 0);
-    const soldeFC = credits
-      .filter((c) => c.devise === 'FC')
-      .reduce((t, c) => t + (c.montant || 0), 0);
+
+    const soldeUSD = results.find((r) => r.devise === 'USD')?._sum.montant || 0;
+    const soldeFC = results.find((r) => r.devise === 'FC')?._sum.montant || 0;
+
     return { soldeUSD, soldeFC };
   }
+
 
   async create(createDto: CreateCreditDto) {
     const { numeroCompte, montant, duree, dateDebut, devise } = createDto;

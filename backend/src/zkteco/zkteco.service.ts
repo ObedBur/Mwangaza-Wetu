@@ -15,7 +15,7 @@ export class ZktecoService implements OnModuleDestroy {
   private readonly ip = '192.168.1.222';
   private readonly port = 4370;
   private readonly timeout = 10000;
-  private readonly inport = 4000;
+  private readonly inport = 4000; 
 
   /**
    * Se connecte à l'appareil ZKTeco
@@ -38,6 +38,11 @@ export class ZktecoService implements OnModuleDestroy {
           this.isConnected = false;
         },
       );
+
+      // Correction de la fuite de mémoire : augmenter la limite de listeners sur le socket interne
+      if (this.zkInstance.zsock) {
+        this.zkInstance.zsock.setMaxListeners(100);
+      }
 
       this.isConnected = true;
       this.logger.log(`Connecté avec succès à l'appareil ZKTeco ${this.ip}`);

@@ -2,8 +2,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CreditRecord } from '@/types';
 import { LoanInput } from '@/lib/validations';
 import { apiClient } from '@/lib/apiClient';
-import { API_ROUTES } from '@/config/api';
+import { API_ROUTES, withId } from '@/config/api';
 import { PaginatedResponse } from '@/types/common';
+
+/** Statistiques agrégées des crédits retournées par le backend */
+export interface CreditStats {
+  totalAmount: number;
+  activeAmount: number;
+  overdueAmount: number;
+  availableBalance: number;
+  totalCount: number;
+  activeCount: number;
+  overdueCount: number;
+}
 
 export interface FetchCreditsParams {
   page?: number;
@@ -47,11 +58,25 @@ const fetchCredits = async (params: FetchCreditsParams): Promise<PaginatedRespon
 
 const createCredit = async (payload: LoanInput): Promise<CreditRecord> => {
   try {
-    const { data } = await apiClient.post<CreditRecord>(API_ROUTES.CREDITS, payload);
+    // Transformation pour correspondre au CreateCreditDto du backend
+    const backendPayload = {
+      numeroCompte: payload.numeroCompte,
+      montant: Number(payload.montant),
+      devise: payload.devise,
+      tauxInteret: Number(payload.tauxInteret),
+      duree: Number(payload.duree),
+      dateDebut: payload.date instanceof Date ? payload.date.toISOString() : new Date(payload.date).toISOString(),
+      description: payload.description || `Crédit pour le compte ${payload.numeroCompte}`
+    };
+
+    const { data } = await apiClient.post<CreditRecord>(API_ROUTES.CREDITS, backendPayload);
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur lors de la création du crédit:', error);
-    throw new Error('Impossible de créer ce crédit. Veuillez réessayer.');
+    // Extraire le message d'erreur du backend si disponible
+    const backendMsg = error.response?.data?.message;
+    const msg = Array.isArray(backendMsg) ? backendMsg.join(', ') : backendMsg;
+    throw new Error(msg || 'Impossible de créer ce crédit. Veuillez réessayer.');
   }
 };
 
@@ -89,6 +114,57 @@ export const useCreateCredit = () => {
     mutationFn: createCredit,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credits'] });
+      queryClient.invalidateQueries({ queryKey: ['creditStats'] });
     },
+  });
+};
+
+/**
+ * Hook pour modifier un crédit existant
+ * Route backend : PATCH /api/credits/:id
+ */
+const updateCredit = async ({
+  id,
+  payload,
+}: {
+  id: string | number;
+  payload: Partial<LoanInput>;
+}): Promise<CreditRecord> => {
+  try {
+    const { data } = await apiClient.patch<CreditRecord>(withId(API_ROUTES.CREDITS, id), payload);
+    return data;
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du crédit:', error);
+    throw new Error('Impossible de modifier ce crédit. Veuillez réessayer.');
+  }
+};
+
+export const useUpdateCredit = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateCredit,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['credits'] });
+      queryClient.invalidateQueries({ queryKey: ['creditStats'] });
+    },
+  });
+};
+
+/**
+ * Hook pour les statistiques agrégées des crédits
+ * Route backend : GET /api/credits/stats
+ */
+export const useCreditStats = () => {
+  return useQuery<CreditStats>({
+    queryKey: ['creditStats'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<CreditStats>(`${API_ROUTES.CREDITS}/stats`);
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    // Ne pas lancer d'erreur si l'endpoint n'existe pas encore
+    retry: false,
   });
 };

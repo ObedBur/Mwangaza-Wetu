@@ -15,13 +15,19 @@ export class SavingsService {
   ) {}
 
   async findAll(type?: TypeOperation) {
-    const where: { typeOperation?: PrismaTypeOperation } = {};
+    const where: { typeOperation?: PrismaTypeOperation; NOT?: any } = {};
     if (type) {
       where.typeOperation = type as unknown as PrismaTypeOperation;
     }
+    // Jamais afficher les transactions du compte collectif dans le tableau général
+    where.NOT = [
+      { compte: 'COOP-REVENUS' },
+      { compte: { contains: 'SECTION-0000' } },
+    ];
 
     return this.prisma.epargne.findMany({
       where,
+      include: { membre: true },
       orderBy: { dateOperation: 'desc' },
     });
   }
@@ -36,14 +42,14 @@ export class SavingsService {
   private getSumFromGrouped(
     arr: {
       devise: Devise;
-      _sum: { montant?: number | null; frais?: number | null };
+      _sum: { montant?: any; frais?: any };
     }[],
     devise: Devise,
     field: 'montant' | 'frais' = 'montant',
   ): number {
     const item = arr.find((d) => d.devise === devise);
     if (!item || !item._sum) return 0;
-    return (item._sum[field] as number) || 0;
+    return Number(item._sum[field]) || 0;
   }
 
   async getSoldes(numeroCompte: string) {
@@ -235,13 +241,13 @@ export class SavingsService {
       return {
         numero_compte: m.numeroCompte,
         soldeFC:
-          getSum(Devise.FC, PrismaTypeOperation.depot) -
-          getSum(Devise.FC, PrismaTypeOperation.retrait) -
-          getFrais(Devise.FC),
+          Number(getSum(Devise.FC, PrismaTypeOperation.depot)) -
+          Number(getSum(Devise.FC, PrismaTypeOperation.retrait)) -
+          Number(getFrais(Devise.FC)),
         soldeUSD:
-          getSum(Devise.USD, PrismaTypeOperation.depot) -
-          getSum(Devise.USD, PrismaTypeOperation.retrait) -
-          getFrais(Devise.USD),
+          Number(getSum(Devise.USD, PrismaTypeOperation.depot)) -
+          Number(getSum(Devise.USD, PrismaTypeOperation.retrait)) -
+          Number(getFrais(Devise.USD)),
       };
     });
   }

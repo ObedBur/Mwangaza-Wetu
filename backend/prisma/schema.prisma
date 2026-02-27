@@ -78,7 +78,7 @@ model Section {
   id           Int      @id @default(autoincrement())
   nom          String   @unique
   numeroCompte String   @unique @map("numero_compte")
-  solde        Float    @default(0)
+  solde        Decimal  @default(0) @db.Decimal(18, 2)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -89,7 +89,7 @@ model CompteEpargne {
   id            Int       @id @default(autoincrement())
   numeroCompte  String    @map("numero_compte")
   typeCompte    String    @map("type_compte")
-  solde         Float     @default(0)
+  solde         Decimal   @default(0) @db.Decimal(18, 2)
   dateOuverture DateTime? @default(now()) @map("date_ouverture")
   statut        String?   @default("actif")
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -105,7 +105,7 @@ model Epargne {
   compte        String
   typeOperation TypeOperationEpargne @map("type_operation")
   devise        Devise
-  montant       Float
+  montant       Decimal              @db.Decimal(18, 2)
   dateOperation DateTime             @map("date_operation")
   description   String?
   createdAt     DateTime             @default(now()) @map("created_at")
@@ -115,17 +115,19 @@ model Epargne {
 }
 
 model Retrait {
-  id            Int      @id @default(autoincrement())
+  id            Int           @id @default(autoincrement())
   compte        String
   devise        Devise
-  montant       Float
-  dateOperation DateTime @map("date_operation")
+  montant       Decimal       @db.Decimal(18, 2)
+  dateOperation DateTime      @map("date_operation")
   description   String?
-  soldeAvant    Float    @map("solde_avant")
-  soldeApres    Float    @map("solde_apres")
-  frais         Float    @default(0)
-  createdAt     DateTime @default(now()) @map("created_at")
-  membre        Membre   @relation(fields: [compte], references: [numeroCompte])
+  soldeAvant    Decimal       @map("solde_avant") @db.Decimal(18, 2)
+  soldeApres    Decimal       @map("solde_apres") @db.Decimal(18, 2)
+  frais         Decimal       @default(0) @db.Decimal(18, 2)
+  reference     String        @unique @default(cuid())
+  statut        StatutRetrait @default(COMPLETED)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  membre        Membre        @relation(fields: [compte], references: [numeroCompte])
 
   @@map("retraits")
 }
@@ -133,10 +135,10 @@ model Retrait {
 model Credit {
   id               Int             @id @default(autoincrement())
   numeroCompte     String          @map("numero_compte")
-  montant          Float
-  montantRembourse Float           @default(0) @map("montant_rembourse")
+  montant          Decimal         @db.Decimal(18, 2)
+  montantRembourse Decimal         @default(0) @map("montant_rembourse") @db.Decimal(18, 2)
   devise           String
-  tauxInteret      Float           @map("taux_interet")
+  tauxInteret      Decimal         @map("taux_interet") @db.Decimal(18, 2)
   duree            Int
   dateDebut        DateTime        @map("date_debut")
   dateEcheance     DateTime?       @map("date_echeance")
@@ -153,7 +155,7 @@ model Credit {
 model Remboursement {
   id                Int      @id @default(autoincrement())
   creditId          Int      @map("credit_id")
-  montant           Float
+  montant           Decimal  @db.Decimal(18, 2)
   devise            String
   dateRemboursement DateTime @map("date_remboursement")
   description       String?
@@ -224,4 +226,10 @@ enum StatutCredit {
   actif
   rembourse
   en_retard
+}
+
+enum StatutRetrait {
+  PENDING
+  COMPLETED
+  FAILED
 }

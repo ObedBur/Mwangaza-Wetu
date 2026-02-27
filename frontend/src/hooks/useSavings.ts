@@ -17,40 +17,69 @@ export interface FetchSavingsParams {
  */
 const fetchSavings = async (params: FetchSavingsParams): Promise<PaginatedResponse<DepositTransaction>> => {
   try {
-    const { data } = await apiClient.get<PaginatedResponse<DepositTransaction>>(API_ROUTES.EPARGNES, {
-      params
+    const { data } = await apiClient.get<any>(API_ROUTES.EPARGNES, {
+      params: {
+        ...params,
+        type: params.search ? undefined : 'depot' // On filtre par dépôt par défaut
+      }
     });
-    return data;
+
+    // Si la donnée est déjà au format paginé
+    if (data?.data && Array.isArray(data.data)) {
+      return data;
+    }
+    
+    // Si le backend renvoie un tableau simple (non paginé)
+    if (Array.isArray(data)) {
+      return {
+        data,
+        meta: {
+          total: data.length,
+          page: params.page || 1,
+          pageSize: params.pageSize || data.length,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPrevPage: false
+        }
+      };
+    }
+
+    return {
+      data: [],
+      meta: { total: 0, page: 1, pageSize: 10, totalPages: 0, hasNextPage: false, hasPrevPage: false }
+    };
   } catch (error: any) {
     console.error('Erreur lors de la récupération des épargnes:', error);
-    
-    // Si c'est une erreur 500, on la propage
     if (error.response?.status === 500) {
       throw new Error('Erreur serveur: Le service est temporairement indisponible');
     }
-    
-    // Pour les autres erreurs, on retourne des données vides
     return {
       data: [],
-      meta: {
-        total: 0,
-        page: params.page || 1,
-        pageSize: params.pageSize || 10,
-        totalPages: 0,
-        hasNextPage: false,
-        hasPrevPage: false
-      }
+      meta: { total: 0, page: 1, pageSize: 10, totalPages: 0, hasNextPage: false, hasPrevPage: false }
     };
   }
 };
 
 const createSavings = async (payload: SavingsInput): Promise<DepositTransaction> => {
   try {
-    const { data } = await apiClient.post<DepositTransaction>(API_ROUTES.EPARGNES, payload);
+    // Transformation pour correspondre au CreateSavingsDto du backend
+    const backendPayload = {
+      compte: payload.numeroCompte,
+      typeOperation: 'depot',
+      devise: payload.devise,
+      montant: Number(payload.montant),
+      dateOperation: payload.date instanceof Date ? payload.date.toISOString() : new Date(payload.date).toISOString(),
+      description: payload.description || `Dépôt sur le compte ${payload.numeroCompte}`
+    };
+
+    const { data } = await apiClient.post<DepositTransaction>(API_ROUTES.EPARGNES, backendPayload);
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur lors de la création de l\'épargne:', error);
-    throw new Error('Impossible de créer cette épargne. Veuillez réessayer.');
+    // Extraire le message d'erreur du backend si disponible
+    const backendMsg = error.response?.data?.message;
+    const msg = Array.isArray(backendMsg) ? backendMsg.join(', ') : backendMsg;
+    throw new Error(msg || 'Impossible de créer cette épargne. Veuillez réessayer.');
   }
 };
 

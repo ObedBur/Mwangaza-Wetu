@@ -34,16 +34,10 @@ export default function DepositsTable() {
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
       {/* Header */}
-      <div className="px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <h2 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+      <div className="px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+        <h2 className="font-bold text-slate-900 dark:text-white">
           Historique des transactions
-          <span className="text-xs font-normal bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">
-            {new Intl.NumberFormat("fr-FR").format(meta?.total ?? 0)} total
-          </span>
         </h2>
-        <span className="text-xs text-slate-500">
-          Dernière mise à jour: à l&apos;instant
-        </span>
       </div>
 
       {/* Table */}

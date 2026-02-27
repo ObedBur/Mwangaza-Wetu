@@ -23,8 +23,24 @@ const fetchRepayments = async (params: FetchRepaymentsParams): Promise<Paginated
 };
 
 const createRepayment = async (payload: RepaymentInput): Promise<RepaymentRecord> => {
-  const { data } = await apiClient.post<RepaymentRecord>(API_ROUTES.REMBOURSEMENTS, payload);
-  return data;
+  try {
+    // Transformation pour correspondre au CreateRemboursementDto du backend
+    const backendPayload = {
+      creditId: Number(payload.pretId),
+      montant: Number(payload.montant),
+      devise: payload.devise,
+      dateRemboursement: payload.date instanceof Date ? payload.date.toISOString() : new Date(payload.date).toISOString(),
+      description: payload.description || `Remboursement du prêt #${payload.pretId}`
+    };
+
+    const { data } = await apiClient.post<RepaymentRecord>(API_ROUTES.REMBOURSEMENTS, backendPayload);
+    return data;
+  } catch (error: any) {
+    console.error('Erreur lors de la création du remboursement:', error);
+    const backendMsg = error.response?.data?.message;
+    const msg = Array.isArray(backendMsg) ? backendMsg.join(', ') : backendMsg;
+    throw new Error(msg || 'Impossible de créer ce remboursement. Veuillez réessayer.');
+  }
 };
 
 export const useRepayments = (params: FetchRepaymentsParams = { page: 1, pageSize: 10 }) => {

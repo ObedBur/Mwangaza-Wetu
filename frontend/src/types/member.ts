@@ -24,6 +24,14 @@ export interface MemberRecord {
   userId?: string | null;
   dateNaissance?: string | null;
   idNationale?: string | null;
+  delegues?: {
+    id: number;
+    nom: string;
+    telephone: string;
+    relation: string;
+    userId?: string | null;
+    photoProfil?: string | null;
+  }[];
   createdAt: string;
   updatedAt: string;
 }

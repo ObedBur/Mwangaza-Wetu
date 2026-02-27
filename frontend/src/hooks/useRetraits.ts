@@ -23,8 +23,24 @@ const fetchRetraits = async (params: FetchRetraitsParams): Promise<PaginatedResp
 };
 
 const createWithdrawal = async (payload: WithdrawalInput): Promise<WithdrawalTransaction> => {
-  const { data } = await apiClient.post<WithdrawalTransaction>(API_ROUTES.WITHDRAWALS, payload);
-  return data;
+  try {
+    // Transformation pour correspondre au CreateWithdrawalDto du backend
+    const backendPayload = {
+      compte: payload.numeroCompte,
+      devise: payload.devise,
+      montant: Number(payload.montant),
+      dateOperation: payload.date instanceof Date ? payload.date.toISOString() : new Date(payload.date).toISOString(),
+      description: payload.description || `Retrait sur le compte ${payload.numeroCompte}`
+    };
+
+    const { data } = await apiClient.post<WithdrawalTransaction>(API_ROUTES.WITHDRAWALS, backendPayload);
+    return data;
+  } catch (error: any) {
+    console.error('Erreur lors de la création du retrait:', error);
+    const backendMsg = error.response?.data?.message;
+    const msg = Array.isArray(backendMsg) ? backendMsg.join(', ') : backendMsg;
+    throw new Error(msg || 'Impossible de créer ce retrait. Veuillez réessayer.');
+  }
 };
 
 export const useRetraits = (params: FetchRetraitsParams = { page: 1, pageSize: 10 }) => {

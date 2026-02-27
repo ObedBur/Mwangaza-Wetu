@@ -56,10 +56,10 @@ export class RemboursementsService {
 
       // 2. Logique d'intérêts (10% système, 5% membre)
       const montantTotalAttendu =
-        credit.montant * (1 + credit.tauxInteret / 100);
+        Number(credit.montant) * (1 + Number(credit.tauxInteret) / 100);
       const proportion = montant / montantTotalAttendu;
       const interetsRembourses =
-        proportion * credit.montant * (credit.tauxInteret / 100);
+        proportion * Number(credit.montant) * (Number(credit.tauxInteret) / 100);
 
       const interetSysteme = interetsRembourses * (10 / 15);
       const interetMembre = interetsRembourses * (5 / 15);
@@ -113,7 +113,7 @@ export class RemboursementsService {
         _sum: { montant: true },
       });
 
-      const totalRembourse = aggregateResult._sum.montant || 0;
+      const totalRembourse = Number(aggregateResult._sum.montant || 0);
       const nouveauStatut =
         totalRembourse >= montantTotalAttendu
           ? StatutCredit.rembourse
@@ -155,10 +155,10 @@ export class RemboursementsService {
         _sum: { montant: true },
       });
 
-      const totalRembourse = aggregateResult._sum.montant || 0;
+      const totalRembourse = Number(aggregateResult._sum.montant || 0);
       const montantTotalAttendu =
-        remboursement.credit.montant *
-        (1 + remboursement.credit.tauxInteret / 100);
+        Number(remboursement.credit.montant) *
+        (1 + Number(remboursement.credit.tauxInteret) / 100);
       const nouveauStatut =
         totalRembourse >= montantTotalAttendu
           ? StatutCredit.rembourse

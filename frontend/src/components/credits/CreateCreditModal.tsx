@@ -1,18 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   X,
-  Fingerprint,
   Lock,
   CheckCircle,
   Eye,
   EyeOff,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { loanSchema, LoanInput } from "@/lib/validations";
+import { useZkTeco } from "@/hooks/useZkTeco";
+import { useMemberByAccount } from "@/hooks/useMembers";
+import { CURRENCIES } from "@/lib/constants";
+import { BiometricScanner } from "@/components/biometric";
 
 interface CreateCreditModalProps {
   isOpen: boolean;
@@ -32,15 +36,16 @@ export default function CreateCreditModal({
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<LoanInput>({
     resolver: zodResolver(loanSchema),
     defaultValues: {
-      numeroCompte: "acc-1",
-      montant: 5000,
+      numeroCompte: "",
+      montant: undefined,
       devise: "USD",
-      tauxInteret: 1.5,
-      duree: 12,
+      tauxInteret: undefined,
+      duree: undefined,
       date: new Date(),
       biometricValidated: false,
       adminPassword: "",
@@ -48,20 +53,47 @@ export default function CreateCreditModal({
   });
 
   const watchAll = watch();
-  const { montant, tauxInteret, duree, date, biometricValidated, devise } =
-    watchAll;
+  const { montant, tauxInteret, duree, date, devise, numeroCompte } = watchAll;
 
-  // Calculations
+  // ─── Recherche du membre par numéro de compte ───────────────────────────
+  const {
+    data: memberData,
+    isFetching: isMemberFetching,
+    isError: isMemberError,
+  } = useMemberByAccount(numeroCompte, { enabled: numeroCompte?.length >= 5 });
+
+  // ─── Biométrie ZKTeco (même logique que le modal membres) ──────────────
+  const {
+    isScanning: isBiometricPending,
+    scanStatus: biometricStatus,
+    scanError: biometricError,
+    userId: biometricUserId,
+    scanFingerprint: triggerScan,
+    reset: resetBiometric,
+  } = useZkTeco();
+
+  // Synchroniser l'état validé du formulaire avec le résultat du scan
+  useEffect(() => {
+    setValue("biometricValidated", biometricStatus === "success", {
+      shouldValidate: biometricStatus === "success",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [biometricStatus]);
+
+  // ─── Calculs dynamiques ────────────────────────────────────────────────
   const calculations = useMemo(() => {
-    const totalInterest = (montant * tauxInteret * duree) / 100 / 12;
-    const totalRepayment = montant + totalInterest;
-    const monthlyPayment = totalRepayment / (duree || 1);
+    const m = montant || 0;
+    const t = tauxInteret || 0;
+    const d = duree || 1;
 
-    // End date calculation
+    const totalInterest = (m * t * d) / 100 / 12;
+    const totalRepayment = m + totalInterest;
+    const monthlyPayment = totalRepayment / d;
+
     const start = new Date(date);
     const end = new Date(start);
     if (!isNaN(end.getTime())) {
-      end.setMonth(end.getMonth() + duree);
+      end.setMonth(end.getMonth() + d);
     }
 
     return {
@@ -77,7 +109,34 @@ export default function CreateCreditModal({
     };
   }, [montant, tauxInteret, duree, date]);
 
+  // ─── Réinitialisation à la fermeture ─────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) {
+      reset({
+        numeroCompte: "",
+        montant: undefined,
+        devise: "USD",
+        tauxInteret: undefined,
+        duree: undefined,
+        date: new Date(),
+        biometricValidated: false,
+        adminPassword: "",
+      });
+      resetBiometric();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const biometricValidated = biometricStatus === "success";
+
+  const memberInitials = memberData
+    ? memberData.firstName[0] + memberData.lastName[0]
+    : null;
+  const memberFullName = memberData
+    ? `${memberData.firstName} ${memberData.lastName}`
+    : null;
 
   return (
     <>
@@ -91,81 +150,59 @@ export default function CreateCreditModal({
           {/* Sidebar: Biometric & Summary */}
           <div className="w-full md:w-1/3 bg-slate-50 dark:bg-slate-800/50 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-6 justify-between overflow-y-auto">
             <div>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                  <Fingerprint className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Sécurité
-                  </p>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Vérification Biométrique
-                  </h3>
-                </div>
-              </div>
-
-              {/* Scan Zone */}
-              <button
-                type="button"
-                onClick={() =>
-                  setValue("biometricValidated", !biometricValidated, {
-                    shouldValidate: true,
-                  })
-                }
-                className={`w-full relative cursor-pointer border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 transition-colors ${
-                  biometricValidated
-                    ? "border-green-500/50 bg-green-50 dark:bg-green-900/10 hover:bg-green-100/50"
-                    : "border-slate-300 dark:border-slate-600 hover:border-primary/40"
-                }`}
-              >
-                <div className="relative h-20 w-20 flex items-center justify-center">
-                  {biometricValidated && (
-                    <div className="absolute inset-0 bg-green-500 opacity-20 rounded-full animate-pulse" />
-                  )}
-                  <Fingerprint
-                    className={`text-5xl ${biometricValidated ? "text-green-600" : "text-primary"}`}
-                  />
-                  {biometricValidated && (
-                    <div className="absolute -bottom-1 -right-1 bg-white dark:bg-slate-900 rounded-full p-1 shadow-sm">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                  )}
-                </div>
-                <div className="text-center">
-                  <p
-                    className={`font-semibold text-sm ${biometricValidated ? "text-green-700" : "text-slate-900 dark:text-white"}`}
-                  >
-                    {biometricValidated
-                      ? "Empreinte Validée"
-                      : "En attente du scan..."}
-                  </p>
-                  {biometricValidated && (
-                    <p className="text-green-600 text-xs">Match 99.8%</p>
-                  )}
-                </div>
-              </button>
+              {/* Scanner biométrique partagé ─ même composant que membres */}
+              <BiometricScanner
+                label="Crédit"
+                status={biometricStatus}
+                error={biometricError}
+                userId={biometricUserId}
+                scanning={isBiometricPending}
+                onScan={triggerScan}
+              />
               {errors.biometricValidated && (
                 <p className="text-red-500 text-[10px] mt-1 text-center">
                   {errors.biometricValidated.message}
                 </p>
               )}
 
-              {/* Member Mini Profile */}
-              <div className="mt-6 p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                  JK
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                    Jean Kabila
-                  </p>
-                  <p className="text-xs text-slate-500">Membre #88291</p>
-                  <div className="flex items-center gap-1 mt-1 text-xs text-primary font-medium">
-                    <CheckCircle className="w-3 h-3" />
-                    <span>Compte Vérifié</span>
+              {/* Mini profil membre — chargé dynamiquement */}
+              <div className="mt-6 p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3 min-h-[72px]">
+                {isMemberFetching ? (
+                  <div className="flex items-center gap-3 w-full">
+                    <div className="h-12 w-12 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-3/4" />
+                      <div className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-1/2" />
+                    </div>
                   </div>
-                </div>
+                ) : isMemberError ? (
+                  <div className="flex items-center gap-2 text-red-500 text-xs font-medium">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    Compte introuvable
+                  </div>
+                ) : memberData ? (
+                  <>
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                      {memberInitials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                            {memberFullName}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            Membre #{memberData.id}
+                          </p>
+                          <div className="flex items-center gap-1 mt-1 text-xs text-primary font-medium">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>Compte Vérifié</span>
+                          </div>
+                        </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">
+                    Saisissez un numéro de compte pour identifier le membre
+                  </p>
+                )}
               </div>
             </div>
 
@@ -231,22 +268,20 @@ export default function CreateCreditModal({
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                 {/* Account Details Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* Account */}
+                  {/* Numéro de compte */}
                   <div className="col-span-1 md:col-span-2">
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                      Compte d&apos;épargne source
+                      Numéro de compte d&apos;épargne source
                     </label>
-                    <div className="relative">
-                      <select
-                        className="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary appearance-none cursor-pointer"
-                        {...register("numeroCompte")}
-                      >
-                        <option value="acc-1">
-                          Compte Courant - USD (Solde: $12,450.00)
-                        </option>
-                        Compte Épargne - FC (Solde: 2,500,000 FC)
-                      </select>
-                    </div>
+                    <input
+                      className={`block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary ${errors.numeroCompte
+                        ? "border-red-400"
+                        : "border-slate-200 dark:border-slate-700"
+                        }`}
+                      placeholder="ex: ACC-12345"
+                      type="text"
+                      {...register("numeroCompte")}
+                    />
                     {errors.numeroCompte && (
                       <p className="text-red-500 text-xs mt-1">
                         {errors.numeroCompte.message}
@@ -263,6 +298,8 @@ export default function CreateCreditModal({
                       <input
                         className="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                         type="number"
+                        min={0}
+                        placeholder="0.00"
                         {...register("montant", { valueAsNumber: true })}
                       />
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -270,7 +307,11 @@ export default function CreateCreditModal({
                           className="border-0 bg-transparent text-slate-500 text-sm focus:ring-0 cursor-pointer"
                           {...register("devise")}
                         >
-                          <option value="USD">USD</option>
+                          {CURRENCIES.map((c) => (
+                            <option key={c.value} value={c.value}>
+                              {c.value}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>
@@ -291,6 +332,8 @@ export default function CreateCreditModal({
                         className="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                         type="number"
                         step="0.1"
+                        min={0}
+                        placeholder="ex: 1.5"
                         {...register("tauxInteret", { valueAsNumber: true })}
                       />
                       <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 text-sm">
@@ -312,6 +355,8 @@ export default function CreateCreditModal({
                     <input
                       className="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                       type="number"
+                      min={1}
+                      placeholder="ex: 12"
                       {...register("duree", { valueAsNumber: true })}
                     />
                     {errors.duree && (

@@ -2,6 +2,7 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMemberDto, Sexe } from './dto/create-member.dto';
@@ -16,6 +17,7 @@ import { Prisma, StatutMembre as PrismaStatutMembre, Devise } from '@prisma/clie
 
 @Injectable()
 export class MembersService {
+  private readonly logger = new Logger(MembersService.name);
   constructor(private prisma: PrismaService) {}
 
   private readonly uploadsDir = path.join(process.cwd(), 'uploads');
@@ -61,7 +63,13 @@ export class MembersService {
     const { page = 1, pageSize = 10, userId } = params;
     const skip = (page - 1) * pageSize;
 
-    const where: any = {};
+    const where: any = {
+      NOT: [
+        { numeroCompte: { contains: '0000' } },
+        { numeroCompte: 'COOP-REVENUS' },
+      ],
+    };
+
     if (userId) {
       where.userId = userId;
     }
@@ -109,22 +117,51 @@ export class MembersService {
       : { exists: false, message: 'Aucun membre trouvé' };
   }
 
+  /**
+   * Trouve un membre à partir d'un ID ZKTeco.
+   * On cherche d'abord si l'ID appartient au membre lui-même,
+   * sinon on cherche si l'ID appartient à l'un de ses délégués.
+   */
+  async findByZkId(zkId: string) {
+    // 1. Chercher si c'est un membre directement
+    let membre = await this.prisma.membre.findFirst({
+      where: { userId: zkId },
+      include: { delegues: true },
+    });
+
+    if (membre) return membre;
+
+    // 2. Sinon, chercher si c'est un délégué
+    const delegue = await this.prisma.delegue.findFirst({
+      where: { userId: zkId },
+      include: {
+        membre: {
+          include: { delegues: true },
+        },
+      },
+    });
+
+    if (delegue?.membre) {
+      return delegue.membre;
+    }
+
+    throw new NotFoundException(`Aucun membre ou délégué trouvé avec l'identifiant biométrique ${zkId}`);
+  }
+
   private async ensureSectionAndCollectiveAccount(
     typeCompte: string,
-    dateAdhesion: string,
   ) {
     const typeNormalise = normalizeSectionName(typeCompte);
-    const date = new Date(dateAdhesion);
-    const year = isNaN(date.getTime())
-      ? new Date().getFullYear()
-      : date.getFullYear();
-    const lettre = getSectionLetter(typeNormalise);
-    const compteCollectif = `COOP-${lettre}-${year}-0000`;
+    const sectionLetter = getSectionLetter(typeNormalise);
 
-    // S'assurer que la section existe
+    // Le compte collectif d'une section est UNIQUE et ne dépend pas de l'année
+    // Format : COOP-X-SECTION-0000 (X est la lettre de section)
+    const compteCollectif = `COOP-${sectionLetter}-SECTION-0000`;
+
+    // 1. S'assurer que la section existe
     await this.prisma.section.upsert({
       where: { nom: typeNormalise },
-      update: {},
+      update: {}, // Ne rien changer si elle existe
       create: {
         nom: typeNormalise,
         numeroCompte: compteCollectif,
@@ -132,7 +169,7 @@ export class MembersService {
       },
     });
 
-    // S'assurer que le compte collectif existe en tant que membre
+    // 2. S'assurer que le compte membre lié au collectif existe
     await this.prisma.membre.upsert({
       where: { numeroCompte: compteCollectif },
       update: {},
@@ -196,8 +233,8 @@ export class MembersService {
       }
     }
 
-    // Gérer la section et le compte collectif
-    await this.ensureSectionAndCollectiveAccount(typeNormalise, dateAdhesion);
+    // Gérer la section et le compte collectif (créés une seule fois au format -SECTION-0000)
+    await this.ensureSectionAndCollectiveAccount(typeNormalise);
 
     let hashedPassword: string | null = null;
     if (motDePasse) {
@@ -234,7 +271,7 @@ export class MembersService {
 
       // 1. Ajouter automatiquement les frais de création (2000 FC) au compte collectif
       const sectionLetter = getSectionLetter(typeNormalise);
-      const compteCollectif = `COOP-${sectionLetter}-${yearAdh}-0000`;
+      const compteCollectif = `COOP-${sectionLetter}-SECTION-0000`;
 
       await tx.epargne.create({
         data: {
@@ -276,31 +313,44 @@ export class MembersService {
         });
       }
 
+      this.logger.log(`✅ Membre créé avec succès : ${membre.numeroCompte} - ${membre.nomComplet}`);
       return membre;
     });
   }
 
   async generateNumero(year: number, section?: string) {
     const currentYear = year || new Date().getFullYear();
-    const prefix = section
-      ? `COOP-${section}-${currentYear}-`
-      : `COOP-${currentYear}-`;
+    const sectionLetter = section || 'P';
 
-    const lastMembre = await this.prisma.membre.findFirst({
-      where: { numeroCompte: { startsWith: prefix } },
+    // Format recherché : COOP-P-2026-
+    const resultPrefix = `COOP-${sectionLetter}-${currentYear}-`;
+
+    // Chercher le dernier membre de cette section ET de cette année
+    const members = await this.prisma.membre.findMany({
+      where: {
+        numeroCompte: { startsWith: resultPrefix },
+        // On ignore les comptes collectifs (ex: COOP-P-SECTION-0000)
+        NOT: {
+          numeroCompte: { contains: 'SECTION' },
+        },
+      },
       orderBy: { numeroCompte: 'desc' },
+      take: 1,
     });
 
     let nextNumber = 1;
-    if (lastMembre) {
+
+    if (members.length > 0) {
+      const lastMembre = members[0];
       const parts = lastMembre.numeroCompte.split('-');
       const lastPart = parts[parts.length - 1];
+
       if (lastPart && /^\d+$/.test(lastPart)) {
         nextNumber = parseInt(lastPart) + 1;
       }
     }
 
-    return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+    return `${resultPrefix}${String(nextNumber).padStart(4, '0')}`;
   }
 
   async findDelegueByUserId(userId: string) {
@@ -467,16 +517,28 @@ export class MembersService {
   }
 
   async getStats() {
-    const total = await this.prisma.membre.count();
+    const filter = {
+      NOT: [
+        { numeroCompte: { contains: '0000' } },
+        { numeroCompte: 'COOP-REVENUS' },
+      ],
+    };
+
+    const total = await this.prisma.membre.count({ where: filter });
     const actifs = await this.prisma.membre.count({
-      where: { statut: PrismaStatutMembre.actif },
+      where: { ...filter, statut: PrismaStatutMembre.actif },
     });
     const inactifs = total - actifs;
-    const hommes = await this.prisma.membre.count({ where: { sexe: 'M' } });
-    const femmes = await this.prisma.membre.count({ where: { sexe: 'F' } });
+    const hommes = await this.prisma.membre.count({
+      where: { ...filter, sexe: 'M' },
+    });
+    const femmes = await this.prisma.membre.count({
+      where: { ...filter, sexe: 'F' },
+    });
 
     const typeComptes = await this.prisma.membre.groupBy({
       by: ['typeCompte'],
+      where: filter,
       _count: { _all: true },
     });
 

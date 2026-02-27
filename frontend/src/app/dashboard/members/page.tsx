@@ -5,7 +5,7 @@ import MembersHeader from "@/components/members/MembersHeader";
 import MembersStatsSection from "@/components/members/MembersStatsSection";
 import MembersTable from "@/components/members/MembersTable";
 import CreateMemberModal from "@/components/members/CreateMemberModal";
-import { useCreateMember } from "@/hooks/useMembers";
+import { useCreateMember, useMembers } from "@/hooks/useMembers";
 import { MemberInput } from "@/lib/validations";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,17 +13,25 @@ export default function MembersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { mutateAsync: createMember } = useCreateMember();
   const { success: toastSuccess, error: toastError } = useToast();
+  
+  // Récupérer tous les membres pour les exports
+  const { data: allMembersResponse } = useMembers({ 
+    page: 1, 
+    pageSize: 1000 // Récupérer jusqu'à 1000 membres pour les exports
+  });
+  const allMembers = allMembersResponse?.data ?? [];
 
   const handleCreateMemberSubmit = async (data: MemberInput) => {
     try {
       const response = await createMember(data);
+      console.log(" Membre créé avec succès :", response);
       setIsModalOpen(false);
       toastSuccess(
         "Membre créé avec succès",
         `Le numéro de compte généré est : ${response.numeroCompte}`
       );
     } catch (error: any) {
-      console.error("Failed to create member:", error);
+      console.error(" Impossible de créer le membre", error);
       toastError(
         "Échec de la création",
         error.message || "Une erreur est survenue lors de la création du membre"
@@ -32,7 +40,7 @@ export default function MembersPage() {
   };
 
   const handleMemberAction = (memberId: number) => {
-    console.log("Action clicked for member:", memberId);
+    console.log("Action  cliqué par le membre:", memberId);
   };
 
   const handleCreateMemberModal = () => {
@@ -41,7 +49,10 @@ export default function MembersPage() {
 
   return (
     <div className="space-y-6">
-      <MembersHeader onCreateClick={handleCreateMemberModal} />
+      <MembersHeader 
+        onCreateClick={handleCreateMemberModal} 
+        members={allMembers}
+      />
 
       <div className="grid gap-6">
         <MembersStatsSection />

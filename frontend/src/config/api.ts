@@ -13,12 +13,18 @@ export const API_ROUTES = {
   MEMBRES_STATS: '/membres/stats',
   MEMBRES_NUMEROS: '/membres/numeros',
   MEMBRES_GENERATE_NUMERO: '/membres/generate-numero',
+  MEMBRES_BY_ZKID: '/membres/by-zkid',
+  MEMBRES_SEARCH: '/membres/search',
 
   // ─── Épargnes ─────────────────────────────────────
   EPARGNES: '/epargnes',
 
   // ─── Crédits ──────────────────────────────────────
   CREDITS: '/credits',
+  CREDITS_STATS: '/credits/stats',
+
+  // ─── Biométrie ────────────────────────────────────
+  BIOMETRIC: '/biometric',
 
   // ─── Retraits (Withdrawals) ───────────────────────
   WITHDRAWALS: '/withdrawals',

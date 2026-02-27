@@ -33,7 +33,7 @@ import { join } from 'path';
     ReportsModule,
     ZktecoModule,
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'uploads'),
+      rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
     }),
   ],

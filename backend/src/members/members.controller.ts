@@ -83,6 +83,11 @@ export class MembersController {
     return this.membersService.findOne(id);
   }
 
+  @Get('by-zkid/:zkId')
+  async findByZkId(@Param('zkId') zkId: string) {
+    return this.membersService.findByZkId(zkId);
+  }
+
   @Get('by-numero/:numero')
   async findByNumero(@Param('numero') numero: string) {
     return this.membersService.findByNumero(numero);

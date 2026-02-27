@@ -97,11 +97,11 @@ export class WithdrawalsService {
 
     const getSum = (type: TypeOperationEpargne) => {
       const item = epargneStats.find((s) => s.typeOperation === type);
-      return item ? item._sum.montant || 0 : 0;
+      return Number(item ? item._sum.montant || 0 : 0);
     };
 
     const soldeActuel =
-      getSum(TypeOperationEpargne.depot) - getSum(TypeOperationEpargne.retrait);
+      Number(getSum(TypeOperationEpargne.depot)) - Number(getSum(TypeOperationEpargne.retrait));
     const soldeMin =
       devise === 'FC' ? params.solde_min_fc : params.solde_min_usd;
 
@@ -127,7 +127,7 @@ export class WithdrawalsService {
       _sum: { montant: true },
     });
 
-    const totalAujourdhui = sumRetraitsAujourdhui._sum.montant || 0;
+    const totalAujourdhui = Number(sumRetraitsAujourdhui._sum.montant || 0);
     const limiteJour =
       devise === 'FC'
         ? params.limite_retrait_jour_fc

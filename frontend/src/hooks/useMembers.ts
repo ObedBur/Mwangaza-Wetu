@@ -4,6 +4,7 @@ import { MemberInput } from '@/lib/validations';
 import { apiClient } from '@/lib/apiClient';
 import { API_ROUTES } from '@/config/api';
 import { PaginatedResponse } from '@/types/common';
+import { ACCOUNT_TYPES } from '@/lib/constants';
 
 export interface FetchMembersParams {
   page?: number;
@@ -62,27 +63,63 @@ const generateAccountNumber = async (params: { typeCompte: string; dateAdhesion:
     // On envoie les bons noms de paramètres attendus par le backend
     const { data } = await apiClient.get<{ numero: string }>(API_ROUTES.MEMBRES_GENERATE_NUMERO, {
       params: {
-        section: params.typeCompte, // Le backend fera la conversion ou on peut envoyer la lettre
+        section: params.typeCompte,
         year: year
       }
     });
     return data;
   } catch (error: any) {
     console.error('Erreur lors de la génération du numéro de compte:', error);
+    // Fallback: calculer le prochain numéro basé sur les comptes existants
+    return calculateNextAccountNumberFallback(params.typeCompte, params.dateAdhesion);
+  }
+};
 
-    // Générer un numéro de compte fallback au format du backend
-    const typeCompteInitial = params.typeCompte?.charAt(0)?.toUpperCase() || 'P';
+const calculateNextAccountNumberFallback = async (typeCompte: string, dateAdhesion: string): Promise<{ numero: string }> => {
+  try {
+    const year = dateAdhesion ? new Date(dateAdhesion).getFullYear() : new Date().getFullYear();
+    
+    // Trouver le bon préfixe basé sur le type de compte
+    const accountTypeConfig = ACCOUNT_TYPES.find(t => t.value === typeCompte);
+    const typePrefix = accountTypeConfig?.prefix || 'P';
+
+    // Récupérer tous les membres pour trouver le dernier numéro du même type
+    const { data: allMembers } = await apiClient.get<PaginatedResponse<MemberRecord>>(API_ROUTES.MEMBRES, {
+      params: { pageSize: 1000 }
+    });
+
+    const members = allMembers.data || [];
+    
+    // Filtrer les comptes du même type (peu importe l'année) et extraire les numéros
+    // Format attendu: COOP-P-2026-0001
+    const searchPattern = `COOP-${typePrefix}-`;
+    const matchingAccounts = members
+      .filter(m => m.numeroCompte?.includes(searchPattern))
+      .map(m => {
+        if (!m.numeroCompte) return 0;
+        const match = m.numeroCompte.match(/-(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(n => n > 0)
+      .sort((a, b) => b - a);
+
+    // Prendre le numéro le plus élevé et ajouter 1
+    const maxNumber = matchingAccounts[0] || 0;
+    const nextNumber = (maxNumber + 1).toString().padStart(4, '0');
+
+    return { numero: `COOP-${typePrefix}-${year}-${nextNumber}` };
+  } catch (err) {
+    console.warn('Fallback calculation failed, using timestamp:', err);
+    
+    // Dernier fallback avec timestamp
+    const accountTypeConfig = ACCOUNT_TYPES.find(t => t.value === typeCompte);
+    const typePrefix = accountTypeConfig?.prefix || 'P';
     const currentYear = new Date().getFullYear();
-
-    // Générer un numéro séquentiel (4 chiffres) avec timestamp
     const timestamp = Date.now();
     const sequentialNumber = (timestamp % 9999) + 1;
     const paddedNumber = sequentialNumber.toString().padStart(4, '0');
-
-    // Format court: COOP-M-2026-0001 (pas COOP-MUTOTO-2026-0001)
-    const fallbackNumero = `COOP-${typeCompteInitial}-${currentYear}-${paddedNumber}`;
-
-    return { numero: fallbackNumero };
+    
+    return { numero: `COOP-${typePrefix}-${currentYear}-${paddedNumber}` };
   }
 };
 
@@ -148,5 +185,89 @@ export const useGenerateAccountNumber = (typeCompte: string, dateAdhesion: strin
     staleTime: 0, // Toujours considérer comme obsolète pour forcer le refresh
     gcTime: 0,    // Ne pas garder en mémoire
     refetchOnWindowFocus: false,
+  });
+};
+export const useMemberStats = () => {
+  return useQuery({
+    queryKey: ['memberStats'],
+    queryFn: async () => {
+      const { data } = await apiClient.get(API_ROUTES.MEMBRES_STATS);
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 60 * 1000, // Rafraîchir toutes les minutes
+  });
+};
+
+/**
+ * Hook pour récupérer un membre par son numéro de compte
+ * Route backend : GET /api/membres/by-account/:numero
+ *
+ * Usage dans les modals pour afficher le profil du membre détecté dynamiquement.
+ */
+export const useMemberByAccount = (
+  numeroCompte: string,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery({
+    queryKey: ['memberByAccount', numeroCompte],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        id: number;
+        firstName: string;
+        lastName: string;
+        accountNumber: string;
+        status: string;
+      }>(`${API_ROUTES.MEMBRES}/by-account/${encodeURIComponent(numeroCompte)}`);
+      return data;
+    },
+    enabled: options?.enabled !== undefined ? options.enabled : !!numeroCompte,
+    retry: false,
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+};
+
+/**
+ * Hook pour récupérer un membre par son ID ZKTeco
+ * Utilisé après un scan réussi pour remplir automatiquement le numéro de compte.
+ */
+export const useMemberByZkId = (zkId: string | null, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['memberByZkId', zkId],
+    queryFn: async () => {
+      if (!zkId) return null;
+      const { data } = await apiClient.get<MemberRecord>(`${API_ROUTES.MEMBRES_BY_ZKID}/${zkId}`);
+      return data;
+    },
+    enabled: !!zkId && (options?.enabled ?? true),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+/**
+ * Hook pour la recherche intuitive (Autocomplete)
+ * Recherche par nom ou numéro de compte.
+ */
+export const useMemberSearch = (query: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['memberSearch', query],
+    queryFn: async () => {
+      if (!query || query.length < 2) return [];
+      try {
+        // On utilise l'endpoint principal /membres qui accepte déjà le paramètre 'search'
+        // et on extrait la liste des membres du champ 'data' de la réponse paginée.
+        const { data } = await apiClient.get<PaginatedResponse<MemberRecord>>(API_ROUTES.MEMBRES, {
+          params: { search: query, pageSize: 20 }
+        });
+        return data.data || [];
+      } catch (error: any) {
+        console.warn('Recherche autocomplete via /membres non disponible:', error.message);
+        return [];
+      }
+    },
+    enabled: (options?.enabled ?? true) && !!query && query.length >= 2,
+    staleTime: 30000,
   });
 };

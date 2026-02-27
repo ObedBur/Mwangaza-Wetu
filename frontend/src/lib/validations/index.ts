@@ -5,26 +5,34 @@ import { z } from "zod";
  * Champs Prisma : nomComplet, sexe (M/F), idNationale, etc.
  */
 export const memberSchema = z.object({
-  numeroCompte: z.string().optional(), // Généré automatiquement par le backend
-  nomComplet: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
-  dateAdhesion: z.string().min(1, "La date d'adhésion est requise"), // Format ISO string
-  telephone: z.string().regex(/^[0-9]{10,15}$/, "Format de téléphone local invalide"),
+  numeroCompte: z.string().optional(),
+  nomComplet: z.string().min(2, "Le nom complet est obligatoire (min. 2 caractères)"),
+  dateAdhesion: z.string().min(1, "La date d'adhésion est requise"),
+  telephone: z.string()
+    .min(1, "Le numéro de téléphone est obligatoire")
+    .regex(/^[0-9]{10,15}$/, "Le numéro doit contenir entre 10 et 15 chiffres"),
   email: z.string().email("Format d'email invalide").optional().or(z.literal("")),
   adresse: z.string().optional(),
-  sexe: z.enum(["M", "F"], { required_error: "Le sexe est requis" }).optional(),
+  sexe: z.enum(["M", "F"], {
+    required_error: "Le genre (sexe) est obligatoire",
+    invalid_type_error: "Veuillez sélectionner le genre"
+  }),
   typeCompte: z.string().min(1, "Le type de compte est requis"),
   statut: z.enum(["actif", "inactif"]).default("actif"),
   photoProfil: z.string().optional(),
-  userId: z.string().optional(), // ID Biométrique ZKTeco
-  motDePasse: z.string().min(4, "Le mot de passe doit contenir au moins 4 caractères").optional(),
+  userId: z.string().optional(),
+  motDePasse: z.string()
+    .min(4, "Le mot de passe doit contenir au moins 4 caractères")
+    .optional()
+    .or(z.literal("")),
   dateNaissance: z.string().optional(),
   idNationale: z.string().optional(),
   delegue: z.object({
-    nom: z.string().optional().or(z.literal("")),
-    telephone: z.string().optional().or(z.literal("")),
-    relation: z.string().optional().or(z.literal("")),
+    nom: z.string().min(1, "Le nom du délégué est requis"),
+    telephone: z.string().min(1, "Le téléphone du délégué est requis"),
+    relation: z.string().min(1, "La relation est requise"),
     pieceIdentite: z.string().optional().or(z.literal("")),
-    userId: z.string().optional(), // ID Biométrique ZKTeco pour le délégué
+    userId: z.string().optional(),
     photoProfil: z.string().optional(),
   }).optional(),
 });

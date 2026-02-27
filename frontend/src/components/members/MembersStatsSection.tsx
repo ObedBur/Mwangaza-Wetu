@@ -1,15 +1,29 @@
-'use client'
-
 import MembersStatsCard from './MembersStatsCard';
-import { Users, UserX, Users2, TrendingUp } from 'lucide-react';
+import { Users, UserX, Users2, TrendingUp, Loader2 } from 'lucide-react';
+import { useMemberStats } from '@/hooks/useMembers';
 
 export default function MembersStatsSection() {
+  const { data: serverStats, isLoading } = useMemberStats();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary opacity-20" />
+      </div>
+    );
+  }
+
+  // Calcul du ratio de genre
+  const totalGender = (serverStats?.hommes || 0) + (serverStats?.femmes || 0);
+  const percentFemmes = totalGender > 0 ? Math.round((serverStats.femmes / totalGender) * 100) : 0;
+  const percentHommes = totalGender > 0 ? Math.round((serverStats.hommes / totalGender) * 100) : 0;
+
   const stats = [
     {
       id: 1,
       icon: <Users className="w-5 sm:w-6 h-5 sm:h-6" />,
       label: 'Active Members',
-      value: '0',
+      value: serverStats?.actifs?.toString() || '0',
       percentage: '12%',
       trend: 'up' as const,
       trendColor: 'green' as const,
@@ -19,7 +33,7 @@ export default function MembersStatsSection() {
       id: 2,
       icon: <UserX className="w-5 sm:w-6 h-5 sm:h-6" />,
       label: 'Inactive',
-      value: '0',
+      value: serverStats?.inactifs?.toString() || '0',
       percentage: '2%',
       trend: 'down' as const,
       trendColor: 'amber' as const,
@@ -29,14 +43,14 @@ export default function MembersStatsSection() {
       id: 3,
       icon: <Users2 className="w-5 sm:w-6 h-5 sm:h-6" />,
       label: 'Gender Ratio',
-      value: '0% F / 0% M',
+      value: `${percentFemmes}% F / ${percentHommes}% M`,
       trendColor: 'blue' as const,
     },
     {
       id: 4,
       icon: <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6" />,
       label: 'Growth %',
-      value: '0%',
+      value: serverStats?.total > 0 ? '+0.2%' : '0%', // Simulation de croissance ou base fixe
       percentage: '0.2%',
       trend: 'up' as const,
       trendColor: 'primary' as const,

@@ -8,6 +8,7 @@ import { memberSchema, MemberInput } from "@/lib/validations";
 import { useGenerateAccountNumber } from "@/hooks/useMembers";
 import { useZkTeco } from "@/hooks/useZkTeco";
 import { ACCOUNT_TYPES } from "@/lib/constants";
+import { BiometricScanner } from "@/components/biometric";
 
 // Composant de téléchargement de photo premium
 const PhotoUpload = ({
@@ -96,8 +97,8 @@ export default function CreateMemberModal({
   const [memberPhoto, setMemberPhoto] = useState<string>("");
   const [deleguePhoto, setDeleguePhoto] = useState<string>("");
 
-  const { isScanning, scanStatus, scanError, userId, scanFingerprint } = useZkTeco();
-  const delegueZk = useZkTeco();
+  const { isScanning, scanStatus, scanError, userId, scanFingerprint } = useZkTeco({ mode: 'registration' });
+  const delegueZk = useZkTeco({ mode: 'registration' });
 
   const {
     register,
@@ -165,110 +166,30 @@ export default function CreateMemberModal({
   }, [userId, delegueZk.userId, delegueZk, setValue]);
 
   const handleFormSubmit = (data: MemberInput) => {
-    // Nettoyer le délégué s'il est vide (ni nom, ni ID)
-    if (data.delegue && !data.delegue.nom && !data.delegue.userId && !data.delegue.photoProfil) {
-      delete data.delegue;
+    // 1. Nettoyer les données (transformer "" en undefined)
+    const cleanData = JSON.parse(JSON.stringify(data), (key, value) => {
+      return value === "" ? undefined : value;
+    });
+
+    // 2. Supprimer l'objet delegue s'il est vide ou si les champs obligatoires manquent
+    if (cleanData.delegue) {
+      const d = cleanData.delegue;
+      if (!d.nom || !d.telephone || !d.relation) {
+        delete cleanData.delegue;
+      }
     }
-    onSubmit(data);
+
+    // 3. Envoyer les données propres
+    onSubmit(cleanData);
+
+    // Reset et nettoyage local
     reset();
     setMemberPhoto("");
     setDeleguePhoto("");
   };
 
+
   if (!isOpen) return null;
-
-  // Composant réutilisable pour l'interface de scan ZKTeco
-  const ZkScanUI = ({
-    status,
-    error,
-    id,
-    scanning,
-    onScan,
-    label
-  }: {
-    status: string,
-    error: string | null,
-    id: string | null,
-    scanning: boolean,
-    onScan: () => void,
-    label: string
-  }) => (
-    <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
-        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-          Capture : {label}
-        </label>
-        {status === 'success' && (
-          <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-            <CheckCircle className="w-3 h-3" /> PRÊT
-          </span>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        {status === 'idle' && (
-          <button
-            type="button"
-            onClick={onScan}
-            disabled={scanning}
-            className="w-full py-2.5 px-4 rounded-lg bg-slate-900 dark:bg-primary hover:bg-slate-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
-          >
-            <Fingerprint className="w-4 h-4" />
-            {scanning ? 'Lecture...' : `Scanner ${label}`}
-          </button>
-        )}
-
-        {status === 'scanning' && (
-          <div className="bg-primary/5 rounded-lg p-4 border-2 border-dashed border-primary/20 flex flex-col items-center justify-center gap-2 animate-pulse">
-            <Fingerprint className="w-8 h-8 text-primary" />
-            <div className="text-center">
-              <span className="text-[10px] font-black text-primary block uppercase">En attente du doigt...</span>
-              <span className="text-[9px] text-slate-500">Posez le doigt sur le lecteur</span>
-            </div>
-          </div>
-        )}
-
-        {status === 'success' && id && (
-          <div className="flex items-center justify-between gap-3 bg-green-50/50 dark:bg-green-900/10 p-3 rounded-lg border border-green-100 dark:border-green-900/30">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle className="w-4 h-4 text-green-600" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-green-800 dark:text-green-300 uppercase">Capturée</p>
-                <p className="text-[11px] font-mono text-green-600 font-bold">ID: {id}</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onScan}
-              className="text-[9px] font-black underline uppercase text-green-700 hover:text-green-800"
-            >
-              Refaire
-            </button>
-          </div>
-        )}
-
-        {status === 'error' && (
-          <div className="bg-red-50 dark:bg-red-900/10 p-3 rounded-lg border border-red-100 dark:border-red-900/30">
-            <div className="flex items-start gap-3 mb-3">
-              <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-              <p className="text-[11px] font-bold text-red-700 dark:text-red-400 leading-tight">
-                {error || "Placez le doigt encore ou réessayez"}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onScan}
-              className="w-full py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] transition-all uppercase"
-            >
-              Réessayer
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -456,8 +377,13 @@ export default function CreateMemberModal({
                       <input
                         type="date"
                         {...register("dateAdhesion")}
-                        className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                        className={`w-full bg-white dark:bg-slate-700 border rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all ${errors.dateAdhesion ? "border-red-500" : "border-slate-200 dark:border-slate-600"}`}
                       />
+                      {errors.dateAdhesion && (
+                        <p className="text-red-500 text-[10px] mt-1">
+                          {errors.dateAdhesion.message}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -552,10 +478,10 @@ export default function CreateMemberModal({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-4">
-                  <ZkScanUI
+                  <BiometricScanner
                     status={scanStatus}
                     error={scanError}
-                    id={userId}
+                    userId={userId}
                     scanning={isScanning}
                     onScan={scanFingerprint}
                     label="Membre Titulaire"
@@ -615,8 +541,13 @@ export default function CreateMemberModal({
                               type="text"
                               {...register("delegue.nom")}
                               placeholder="Nom Complet"
-                              className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                              className={`w-full bg-white dark:bg-slate-700 border rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all ${errors.delegue?.nom ? "border-red-500" : "border-slate-200 dark:border-slate-600"}`}
                             />
+                            {errors.delegue?.nom && (
+                              <p className="text-red-500 text-[10px] mt-1">
+                                {errors.delegue.nom.message}
+                              </p>
+                            )}
                           </div>
 
                           <div className="space-y-1">
@@ -625,7 +556,7 @@ export default function CreateMemberModal({
                             </label>
                             <select
                               {...register("delegue.relation")}
-                              className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                              className={`w-full bg-white dark:bg-slate-700 border rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all ${errors.delegue?.relation ? "border-red-500" : "border-slate-200 dark:border-slate-600"}`}
                             >
                               <option value="">Sélectionner</option>
                               <option value="Conjoint(e)">Conjoint(e)</option>
@@ -635,6 +566,11 @@ export default function CreateMemberModal({
                               <option value="Cousin(e)">Cousin(e)</option>
                               <option value="Autre">Autre</option>
                             </select>
+                            {errors.delegue?.relation && (
+                              <p className="text-red-500 text-[10px] mt-1">
+                                {errors.delegue.relation.message}
+                              </p>
+                            )}
                           </div>
                         </div>
 
@@ -647,8 +583,13 @@ export default function CreateMemberModal({
                               type="text"
                               {...register("delegue.telephone")}
                               placeholder="0812345678"
-                              className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                              className={`w-full bg-white dark:bg-slate-700 border rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all ${errors.delegue?.telephone ? "border-red-500" : "border-slate-200 dark:border-slate-600"}`}
                             />
+                            {errors.delegue?.telephone && (
+                              <p className="text-red-500 text-[10px] mt-1">
+                                {errors.delegue.telephone.message}
+                              </p>
+                            )}
                           </div>
 
                           <div className="space-y-1">
@@ -667,10 +608,10 @@ export default function CreateMemberModal({
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <ZkScanUI
+                      <BiometricScanner
                         status={delegueZk.scanStatus}
                         error={delegueZk.scanError}
-                        id={delegueZk.userId}
+                        userId={delegueZk.userId}
                         scanning={delegueZk.isScanning}
                         onScan={delegueZk.scanFingerprint}
                         label="Délégué"

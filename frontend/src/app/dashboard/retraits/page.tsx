@@ -52,7 +52,10 @@ export default function RetraitsPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <RetraitsHeader onCreateClick={() => setIsModalOpen(true)} />
+      <RetraitsHeader
+        onCreateClick={() => setIsModalOpen(true)}
+        transactions={transactions}
+      />
 
       <RetraitsStatsSection
         todayTotalFC={stats.todayTotalFC}

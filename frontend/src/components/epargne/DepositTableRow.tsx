@@ -1,54 +1,74 @@
 "use client";
 
+import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { DepositTransaction } from "@/types";
 
 export default function DepositTableRow({ tx }: { tx: DepositTransaction }) {
+  const [imageError, setImageError] = useState(false);
+
+  /** Génère l'URL de la photo de profil */
+  const getPhotoUrl = (photo: string) => {
+    if (photo.startsWith('data:')) return photo;
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/api$/, '');
+    return `${baseUrl}/uploads/${photo}?t=${Date.now()}`;
+  };
+
   return (
     <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
       <td className="px-4 sm:px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-            {initials(tx.memberName)}
+          <div className="relative w-10 h-10 rounded-full overflow-hidden shadow-sm shrink-0 bg-primary/10 flex items-center justify-center">
+            {tx.membre?.photoProfil && !imageError ? (
+              <img
+                src={getPhotoUrl(tx.membre.photoProfil)}
+                alt={tx.membre.nomComplet}
+                className="w-full h-full object-cover"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <span className="text-primary font-bold text-sm">
+                {initials(tx.membre?.nomComplet || "??")}
+              </span>
+            )}
           </div>
           <div>
             <div className="font-semibold text-slate-900 dark:text-white">
-              {tx.memberName}
+              {tx.membre?.nomComplet || "Membre Inconnu"}
             </div>
-            <div className="text-xs text-slate-500">#{tx.accountNumber}</div>
+            <div className="text-xs text-slate-500">#{tx.compte}</div>
           </div>
         </div>
       </td>
 
       <td className="px-4 sm:px-6 py-4 font-bold text-slate-900 dark:text-white">
-        {formatAmount(tx.amount)}
+        {formatAmount(tx.montant)}
       </td>
 
       <td className="px-4 sm:px-6 py-4 text-center">
         <span
           className={
-            tx.currency === "FC"
+            tx.devise === "FC"
               ? "px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded text-[10px] font-bold"
               : "px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-[10px] font-bold"
           }
         >
-          {tx.currency}
+          {tx.devise}
         </span>
       </td>
 
       <td className="px-4 sm:px-6 py-4">
         <div className="text-sm text-slate-600 dark:text-slate-200">
-          {formatDate(tx.dateISO)}
+          {formatDate(tx.dateOperation)}
         </div>
-        <div className="text-[10px] text-slate-400 italic">{tx.time}</div>
+        <div className="text-[10px] text-slate-400 italic">
+          {new Date(tx.dateOperation).toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit' })}
+        </div>
       </td>
 
       <td className="px-4 sm:px-6 py-4">
-        <div className="text-sm font-medium text-slate-900 dark:text-white">
-          {formatAmount(tx.runningTotal.amount)} {tx.runningTotal.currency}
-        </div>
-        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center">
-          +{tx.runningTotal.changePct}%
+        <div className="text-xs text-slate-500 truncate max-w-[150px]">
+          {tx.description || "-"}
         </div>
       </td>
 

@@ -63,25 +63,25 @@ export class BalancesService {
     return {
       fc: {
         solde:
-          getSum(Devise.FC, TypeOperationEpargne.depot) -
-          getSum(Devise.FC, TypeOperationEpargne.retrait) -
-          getFraisSum(Devise.FC),
-        epargne: getSum(Devise.FC, TypeOperationEpargne.depot),
-        retrait: getSum(Devise.FC, TypeOperationEpargne.retrait),
-        frais: getFraisSum(Devise.FC),
-        credit: getCreditSum(Devise.FC).total,
-        benefices: beneficesFC._sum.montant || 0,
+          Number(getSum(Devise.FC, TypeOperationEpargne.depot)) -
+          Number(getSum(Devise.FC, TypeOperationEpargne.retrait)) -
+          Number(getFraisSum(Devise.FC)),
+        epargne: Number(getSum(Devise.FC, TypeOperationEpargne.depot)),
+        retrait: Number(getSum(Devise.FC, TypeOperationEpargne.retrait)),
+        frais: Number(getFraisSum(Devise.FC)),
+        credit: Number(getCreditSum(Devise.FC).total),
+        benefices: Number(beneficesFC._sum.montant || 0),
       },
       usd: {
         solde:
-          getSum(Devise.USD, TypeOperationEpargne.depot) -
-          getSum(Devise.USD, TypeOperationEpargne.retrait) -
-          getFraisSum(Devise.USD),
-        epargne: getSum(Devise.USD, TypeOperationEpargne.depot),
-        retrait: getSum(Devise.USD, TypeOperationEpargne.retrait),
-        frais: getFraisSum(Devise.USD),
-        credit: getCreditSum(Devise.USD).total,
-        benefices: beneficesUSD._sum.montant || 0,
+          Number(getSum(Devise.USD, TypeOperationEpargne.depot)) -
+          Number(getSum(Devise.USD, TypeOperationEpargne.retrait)) -
+          Number(getFraisSum(Devise.USD)),
+        epargne: Number(getSum(Devise.USD, TypeOperationEpargne.depot)),
+        retrait: Number(getSum(Devise.USD, TypeOperationEpargne.retrait)),
+        frais: Number(getFraisSum(Devise.USD)),
+        credit: Number(getCreditSum(Devise.USD).total),
+        benefices: Number(beneficesUSD._sum.montant || 0),
       },
     };
   }
@@ -125,19 +125,19 @@ export class BalancesService {
 
     return {
       soldeFC:
-        getSum(Devise.FC, TypeOperationEpargne.depot) -
-        getSum(Devise.FC, TypeOperationEpargne.retrait),
+        Number(getSum(Devise.FC, TypeOperationEpargne.depot)) -
+        Number(getSum(Devise.FC, TypeOperationEpargne.retrait)),
       soldeUSD:
-        getSum(Devise.USD, TypeOperationEpargne.depot) -
-        getSum(Devise.USD, TypeOperationEpargne.retrait),
-      epargneFC: getSum(Devise.FC, TypeOperationEpargne.depot),
-      epargneUSD: getSum(Devise.USD, TypeOperationEpargne.depot),
-      retraitFC: getSum(Devise.FC, TypeOperationEpargne.retrait),
-      retraitUSD: getSum(Devise.USD, TypeOperationEpargne.retrait),
-      creditFC: getCreditSum(Devise.FC).montant,
-      creditUSD: getCreditSum(Devise.USD).montant,
-      remboursementFC: getCreditSum(Devise.FC).rembourse,
-      remboursementUSD: getCreditSum(Devise.USD).rembourse,
+        Number(getSum(Devise.USD, TypeOperationEpargne.depot)) -
+        Number(getSum(Devise.USD, TypeOperationEpargne.retrait)),
+      epargneFC: Number(getSum(Devise.FC, TypeOperationEpargne.depot)),
+      epargneUSD: Number(getSum(Devise.USD, TypeOperationEpargne.depot)),
+      retraitFC: Number(getSum(Devise.FC, TypeOperationEpargne.retrait)),
+      retraitUSD: Number(getSum(Devise.USD, TypeOperationEpargne.retrait)),
+      creditFC: Number(getCreditSum(Devise.FC).montant),
+      creditUSD: Number(getCreditSum(Devise.USD).montant),
+      remboursementFC: Number(getCreditSum(Devise.FC).rembourse),
+      remboursementUSD: Number(getCreditSum(Devise.USD).rembourse),
     };
   }
 
@@ -150,7 +150,7 @@ export class BalancesService {
     const aggregate = rows.reduce(
       (acc, r) => {
         const d = r.devise.toUpperCase();
-        acc[d] = (acc[d] || 0) + (r.frais || 0);
+        acc[d] = (acc[d] || 0) + Number(r.frais || 0);
         return acc;
       },
       {} as Record<string, number>,

@@ -1,21 +1,25 @@
-// types/epargne.ts
-import { Currency, RunningTotal } from './common';
-// Interface pour les transactions de dépôt
+import { Currency } from './common';
+import { MemberRecord } from './member';
+
+// Interface pour les transactions de dépôt/retrait (Épargne)
 export interface DepositTransaction {
-  id: string;
-  memberName: string;
-  accountNumber: string;
-  amount: number;
-  currency: Currency;
-  dateISO: string;
-  time: string;
-  runningTotal: RunningTotal;
+  id: number;
+  compte: string;
+  typeOperation: 'depot' | 'retrait';
+  devise: Currency;
+  montant: number;
+  dateOperation: string;
+  description?: string;
+  membre?: MemberRecord;
+  createdAt: string;
 }
-// Interface pour la création d'un dépôt
+
+// Interface pour la création d'un dépôt (Payload Front-end)
 export interface CreateDepositPayload {
-  memberId: string;
-  amount: number;
-  currency: Currency;
-  sourceOfFunds?: string;
+  compte: string;
+  montant: number;
+  devise: Currency;
+  dateOperation: string;
+  description?: string;
   biometricValidated?: boolean;
 }
