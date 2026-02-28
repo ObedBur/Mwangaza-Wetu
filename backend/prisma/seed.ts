@@ -112,6 +112,27 @@ async function main() {
         console.log(`✅ Section ${sec.nom} prête (Collectif: ${compteCollectif}, Revenus: ${revenueAccount})`);
     }
 
+    // --- INITIALISATION DES TYPES DE REVENUS ---
+    console.log('🔄 Initialisation des types de revenus...');
+    const revenueTypes = [
+        { nom: 'Système Épargne', description: 'Revenus issus des adhésions et dépôts courants' },
+        { nom: 'Système Retrait', description: 'Revenus issus des frais de retrait' },
+        { nom: 'Système Crédit',  description: 'Revenus issus des frais d\'octroi de crédit' },
+        { nom: 'Système Remboursement', description: 'Revenus issus des intérêts sur remboursements (15%)' },
+    ];
+
+    for (const type of revenueTypes) {
+        await prisma.revenuType.upsert({
+            where: { nom: type.nom },
+            update: { description: type.description },
+            create: {
+                nom: type.nom,
+                description: type.description,
+            },
+        });
+    }
+    console.log('✅ Types de revenus prêts.');
+
     // Création du compte GLOBAL CONSOLIDÉ
     await prisma.membre.upsert({
         where: { numeroCompte: 'MW-REVENUS-GLOBAL' },

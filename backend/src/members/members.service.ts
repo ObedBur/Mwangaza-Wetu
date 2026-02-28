@@ -230,6 +230,23 @@ export class MembersService {
         },
       });
 
+      // Enregistrer le revenu d'Adhésion (2000 FC) dans la table Revenu
+      const revType = await tx.revenuType.findFirst({
+        where: { nom: 'Système Épargne' },
+      });
+
+      if (revType) {
+        await tx.revenu.create({
+          data: {
+            typeCompte: typeNormalise,
+            typeRevenuId: revType.id,
+            montant: 2000,
+            devise: Devise.FC,
+            dateOperation: new Date(dateAdhesion),
+            sourceCompte: finalNumeroCompte,
+          },
+        });
+      }
 
       // 2. Gérer le délégué
       if (delegue) {
