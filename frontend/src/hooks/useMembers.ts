@@ -90,36 +90,18 @@ const calculateNextAccountNumberFallback = async (typeCompte: string, dateAdhesi
 
     const members = allMembers.data || [];
     
-    // Filtrer les comptes du même type (peu importe l'année) et extraire les numéros
-    // Format attendu: COOP-P-2026-0001
-    const searchPattern = `COOP-${typePrefix}-`;
-    const matchingAccounts = members
-      .filter(m => m.numeroCompte?.includes(searchPattern))
-      .map(m => {
-        if (!m.numeroCompte) return 0;
-        const match = m.numeroCompte.match(/-(\d+)$/);
-        return match ? parseInt(match[1], 10) : 0;
-      })
-      .filter(n => n > 0)
-      .sort((a, b) => b - a);
-
-    // Prendre le numéro le plus élevé et ajouter 1
-    const maxNumber = matchingAccounts[0] || 0;
-    const nextNumber = (maxNumber + 1).toString().padStart(4, '0');
-
-    return { numero: `COOP-${typePrefix}-${year}-${nextNumber}` };
+    // Format attendu: MW-TRI-RANDOM6
+    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase().padEnd(6, '0');
+    return { numero: `MW-${typePrefix}-${randomPart}` };
   } catch (err) {
-    console.warn('Fallback calculation failed, using timestamp:', err);
+    console.warn('Fallback calculation failed, using backup:', err);
     
     // Dernier fallback avec timestamp
     const accountTypeConfig = ACCOUNT_TYPES.find(t => t.value === typeCompte);
-    const typePrefix = accountTypeConfig?.prefix || 'P';
-    const currentYear = new Date().getFullYear();
-    const timestamp = Date.now();
-    const sequentialNumber = (timestamp % 9999) + 1;
-    const paddedNumber = sequentialNumber.toString().padStart(4, '0');
+    const typePrefix = accountTypeConfig?.prefix || 'PRI';
+    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase().padEnd(6, '0');
     
-    return { numero: `COOP-${typePrefix}-${currentYear}-${paddedNumber}` };
+    return { numero: `MW-${typePrefix}-${randomPart}` };
   }
 };
 

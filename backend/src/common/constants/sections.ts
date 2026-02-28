@@ -18,6 +18,15 @@ export const SECTION_LETTERS = {
   MUTOTO: 'M',
 } as const;
 
+export const SECTION_TRIGRAMS = {
+  PRINCIPAL: 'PRI',
+  KELASI: 'KEL',
+  NYUMBA: 'NYU',
+  HOPITAL: 'HOP',
+  BIASHARA: 'BIA',
+  MUTOTO: 'MUT',
+} as const;
+
 export function normalizeSectionName(name: string): string {
   if (!name) return '';
   const n = name.trim().toUpperCase();
@@ -31,5 +40,13 @@ export function getSectionLetter(sectionName: string): string {
   return (
     SECTION_LETTERS[normalized as keyof typeof SECTION_LETTERS] ||
     (normalized ? normalized.charAt(0) : 'X')
+  );
+}
+
+export function getSectionTrigram(sectionName: string): string {
+  const normalized = normalizeSectionName(sectionName);
+  return (
+    SECTION_TRIGRAMS[normalized as keyof typeof SECTION_TRIGRAMS] ||
+    (normalized ? normalized.substring(0, 3).toUpperCase() : 'XXX')
   );
 }

@@ -96,9 +96,13 @@ export default function AccountSearchInput({
         />
 
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-          {isSearching && <Loader2 className="w-4 h-4 animate-spin text-primary" />}
+          {isSearching && (
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          )}
           {value && !isSearching && (
-             <CheckCircle className={`w-4 h-4 ${value.includes('COOP-') ? 'text-green-500' : 'text-slate-300'}`} />
+            <CheckCircle
+              className={`w-4 h-4 ${value.includes("MW-") ? "text-green-500" : "text-slate-300"}`}
+            />
           )}
         </div>
       </div>
@@ -135,7 +139,9 @@ export default function AccountSearchInput({
                   </p>
                 </div>
                 <div className="shrink-0 scale-75 opacity-50">
-                   {s.statut === 'actif' && <div className="w-2 h-2 rounded-full bg-green-500" />}
+                  {s.statut === "actif" && (
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                  )}
                 </div>
               </button>
             ))}

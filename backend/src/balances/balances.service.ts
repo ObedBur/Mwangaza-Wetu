@@ -44,7 +44,7 @@ export class BalancesService {
 
     const beneficesFC = await this.prisma.epargne.aggregate({
       where: {
-        compte: 'COOP-REVENUS',
+        compte: 'MW-REVENUS-GLOBAL',
         devise: Devise.FC,
         typeOperation: TypeOperationEpargne.depot,
       },
@@ -53,7 +53,7 @@ export class BalancesService {
 
     const beneficesUSD = await this.prisma.epargne.aggregate({
       where: {
-        compte: 'COOP-REVENUS',
+        compte: 'MW-REVENUS-GLOBAL',
         devise: Devise.USD,
         typeOperation: TypeOperationEpargne.depot,
       },

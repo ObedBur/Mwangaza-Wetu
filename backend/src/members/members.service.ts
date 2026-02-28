@@ -9,6 +9,7 @@ import { CreateMemberDto, Sexe } from './dto/create-member.dto';
 import {
   normalizeSectionName,
   getSectionLetter,
+  getSectionTrigram,
 } from '../common/constants/sections';
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
@@ -65,8 +66,8 @@ export class MembersService {
 
     const where: any = {
       NOT: [
-        { numeroCompte: { contains: '0000' } },
-        { numeroCompte: 'COOP-REVENUS' },
+        { numeroCompte: { contains: 'SECTION-0000' } },
+        { numeroCompte: 'MW-REVENUS-GLOBAL' },
       ],
     };
 
@@ -148,44 +149,6 @@ export class MembersService {
     throw new NotFoundException(`Aucun membre ou délégué trouvé avec l'identifiant biométrique ${zkId}`);
   }
 
-  private async ensureSectionAndCollectiveAccount(
-    typeCompte: string,
-  ) {
-    const typeNormalise = normalizeSectionName(typeCompte);
-    const sectionLetter = getSectionLetter(typeNormalise);
-
-    // Le compte collectif d'une section est UNIQUE et ne dépend pas de l'année
-    // Format : COOP-X-SECTION-0000 (X est la lettre de section)
-    const compteCollectif = `COOP-${sectionLetter}-SECTION-0000`;
-
-    // 1. S'assurer que la section existe
-    await this.prisma.section.upsert({
-      where: { nom: typeNormalise },
-      update: {}, // Ne rien changer si elle existe
-      create: {
-        nom: typeNormalise,
-        numeroCompte: compteCollectif,
-        solde: 0,
-      },
-    });
-
-    // 2. S'assurer que le compte membre lié au collectif existe
-    await this.prisma.membre.upsert({
-      where: { numeroCompte: compteCollectif },
-      update: {},
-      create: {
-        numeroCompte: compteCollectif,
-        nomComplet: `Compte Collectif ${typeNormalise}`,
-        dateAdhesion: new Date(),
-        telephone: '0000000000',
-        typeCompte: typeNormalise,
-        statut: PrismaStatutMembre.actif,
-        motDePasse: 'collectif',
-      },
-    });
-
-    return compteCollectif;
-  }
 
   async create(createMemberDto: CreateMemberDto) {
     const {
@@ -206,8 +169,8 @@ export class MembersService {
     // Générer le numéro de compte s'il n'est pas fourni
     let finalNumeroCompte = numeroCompte;
     if (!finalNumeroCompte) {
-      const sectionLetter = getSectionLetter(typeNormalise);
-      finalNumeroCompte = await this.generateNumero(yearAdh, sectionLetter);
+      const sectionTrigram = getSectionTrigram(typeNormalise);
+      finalNumeroCompte = await this.generateNumero(yearAdh, sectionTrigram);
     } else {
       // Vérifier l'unicité seulement s'il est fourni
       const existingNum = await this.prisma.membre.findUnique({
@@ -233,8 +196,6 @@ export class MembersService {
       }
     }
 
-    // Gérer la section et le compte collectif (créés une seule fois au format -SECTION-0000)
-    await this.ensureSectionAndCollectiveAccount(typeNormalise);
 
     let hashedPassword: string | null = null;
     if (motDePasse) {
@@ -269,30 +230,6 @@ export class MembersService {
         },
       });
 
-      // 1. Ajouter automatiquement les frais de création (2000 FC) au compte collectif
-      const sectionLetter = getSectionLetter(typeNormalise);
-      const compteCollectif = `COOP-${sectionLetter}-SECTION-0000`;
-
-      await tx.epargne.create({
-        data: {
-          compte: compteCollectif,
-          typeOperation: 'depot',
-          devise: 'FC',
-          montant: 2000,
-          dateOperation: new Date(dateAdhesion),
-          description: `Cotisation de création - Membre ${finalNumeroCompte}`,
-        },
-      });
-
-      // Mettre à jour le solde du compte collectif
-      await tx.section.update({
-        where: { nom: typeNormalise },
-        data: {
-          solde: {
-            increment: 2000,
-          },
-        },
-      });
 
       // 2. Gérer le délégué
       if (delegue) {
@@ -319,38 +256,33 @@ export class MembersService {
   }
 
   async generateNumero(year: number, section?: string) {
-    const currentYear = year || new Date().getFullYear();
-    const sectionLetter = section || 'P';
+    const sectionTrigram = section || 'PRI';
 
-    // Format recherché : COOP-P-2026-
-    const resultPrefix = `COOP-${sectionLetter}-${currentYear}-`;
+    // Format final sans année avec 6 caractères aléatoires : MW-TRI-RANDOM6
+    let finalNumero: string;
+    let isUnique = false;
 
-    // Chercher le dernier membre de cette section ET de cette année
-    const members = await this.prisma.membre.findMany({
-      where: {
-        numeroCompte: { startsWith: resultPrefix },
-        // On ignore les comptes collectifs (ex: COOP-P-SECTION-0000)
-        NOT: {
-          numeroCompte: { contains: 'SECTION' },
-        },
-      },
-      orderBy: { numeroCompte: 'desc' },
-      take: 1,
-    });
+    while (!isUnique) {
+      // Générer 6 caractères alphanumériques aléatoires
+      const randomPart = Math.random()
+        .toString(36)
+        .substring(2, 8)
+        .toUpperCase()
+        .padEnd(6, '0');
+      
+      finalNumero = `MW-${sectionTrigram}-${randomPart}`;
 
-    let nextNumber = 1;
+      // Vérifier l'unicité
+      const existing = await this.prisma.membre.findUnique({
+        where: { numeroCompte: finalNumero },
+      });
 
-    if (members.length > 0) {
-      const lastMembre = members[0];
-      const parts = lastMembre.numeroCompte.split('-');
-      const lastPart = parts[parts.length - 1];
-
-      if (lastPart && /^\d+$/.test(lastPart)) {
-        nextNumber = parseInt(lastPart) + 1;
+      if (!existing) {
+        isUnique = true;
       }
     }
 
-    return `${resultPrefix}${String(nextNumber).padStart(4, '0')}`;
+    return finalNumero!;
   }
 
   async findDelegueByUserId(userId: string) {
@@ -519,8 +451,8 @@ export class MembersService {
   async getStats() {
     const filter = {
       NOT: [
-        { numeroCompte: { contains: '0000' } },
-        { numeroCompte: 'COOP-REVENUS' },
+        { numeroCompte: { contains: 'SECTION-0000' } },
+        { numeroCompte: 'MW-REVENUS-GLOBAL' },
       ],
     };
 

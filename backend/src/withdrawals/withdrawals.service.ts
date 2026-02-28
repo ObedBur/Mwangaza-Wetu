@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 import { Devise, TypeOperationEpargne } from '@prisma/client';
 import { ParametresService } from '../parametres/parametres.service';
+import { getSectionTrigram } from '../common/constants/sections';
 
 @Injectable()
 export class WithdrawalsService {
@@ -146,12 +147,23 @@ export class WithdrawalsService {
     const { compte, montant, devise, dateOperation, description } = dto;
     const dateO = new Date(dateOperation);
 
+    // 0. Récupérer les informations du membre pour son type de compte
+    const membre = await this.prisma.membre.findUnique({
+      where: { numeroCompte: compte },
+      select: { typeCompte: true }
+    });
+
+    if (!membre) {
+      throw new BadRequestException(`Membre avec le compte ${compte} non trouvé`);
+    }
+
     const { soldeActuel } = await this.verifyLimites(compte, montant, devise);
 
     const frais = await this.calculateFees(montant, devise);
     const soldeApres = soldeActuel - (montant + frais);
 
     return this.prisma.$transaction(async (tx) => {
+      // 1. Enregistrer le retrait du membre
       await tx.epargne.create({
         data: {
           compte,
@@ -176,18 +188,6 @@ export class WithdrawalsService {
         },
       });
 
-      if (frais > 0) {
-        await tx.epargne.create({
-          data: {
-            compte: 'COOP-REVENUS',
-            typeOperation: TypeOperationEpargne.depot,
-            devise: devise as Devise,
-            montant: frais,
-            dateOperation: dateO,
-            description: `Frais de retrait sur ${compte}`,
-          },
-        });
-      }
 
       return retrait;
     });

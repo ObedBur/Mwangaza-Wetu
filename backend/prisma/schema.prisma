@@ -233,3 +233,27 @@ enum StatutRetrait {
   COMPLETED
   FAILED
 }
+
+model RevenuType {
+  id          Int      @id @default(autoincrement())
+  nom         String   @unique
+  description String?
+  revenus     Revenu[]
+
+  @@map("revenu_types")
+}
+
+model Revenu {
+  id            Int        @id @default(autoincrement())
+  typeCompte    String     @map("type_compte")
+  typeRevenuId  Int        @map("type_revenu_id")
+  typeRevenu    RevenuType @relation(fields: [typeRevenuId], references: [id])
+  montant       Decimal    @db.Decimal(18, 2)
+  devise        Devise
+  dateOperation DateTime   @map("date_operation")
+  sourceCompte  String?    @map("source_compte")
+  referenceId   String?    @map("reference_id")
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  @@map("revenus")
+}

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateParametreDto } from './dto/update-parametre.dto';
+import axios from 'axios';
 
 export interface GeneralParameters {
   solde_min_fc: number;
@@ -14,6 +15,7 @@ export interface GeneralParameters {
   max_retraits_par_jour: number;
   montant_max_par_retrait_fc: number;
   montant_max_par_retrait_usd: number;
+  taux_usd_cdf: number;
   heures_autorisees: { debut: string; fin: string };
   motif_obligatoire: boolean;
   retraits?: {
@@ -37,6 +39,19 @@ export class ParametresService {
     const param = await this.prisma.parametreEpargne.findUnique({
       where: { nomParametre: nom },
     });
+    
+    // Si c'est le paramètre principal et qu'il est absent, on l'initialise
+    if (!param && nom === 'parametres_generaux') {
+      const defaults = await this.getGeneralParameters();
+      return this.prisma.parametreEpargne.create({
+        data: {
+          nomParametre: 'parametres_generaux',
+          valeur: JSON.stringify(defaults),
+          description: 'Initialisation automatique des paramètres généraux'
+        }
+      });
+    }
+
     if (!param) throw new NotFoundException(`Paramètre ${nom} non trouvé`);
     return param;
   }
@@ -67,6 +82,42 @@ export class ParametresService {
     }
   }
 
+  /**
+   * Récupère le taux de change actuel via une API externe
+   * Note: En RDC, le taux parallèle peut différer du taux officiel.
+   */
+  async syncExchangeRate(): Promise<number> {
+    try {
+      // Utilisation d'une API de change public (ex: exchangerate-api)
+      const response = await axios.get('https://api.exchangerate-api.com/v4/latest/USD');
+      const rate = response.data.rates.CDF;
+
+      if (rate) {
+        const params = await this.getGeneralParameters();
+        params.taux_usd_cdf = rate;
+        
+        await this.prisma.parametreEpargne.upsert({
+          where: { nomParametre: 'parametres_generaux' },
+          update: {
+            valeur: JSON.stringify(params),
+            description: `Mise à jour automatique du taux : 1 USD = ${rate} CDF`
+          },
+          create: {
+            nomParametre: 'parametres_generaux',
+            valeur: JSON.stringify(params),
+            description: `Mise à jour automatique du taux : 1 USD = ${rate} CDF`
+          }
+        });
+        
+        return rate;
+      }
+      return 0;
+    } catch (error) {
+      console.error('Erreur lors de la synchronisation du taux:', error.message);
+      return 0;
+    }
+  }
+
   async getGeneralParameters(): Promise<GeneralParameters> {
     const val = await this.getValeur('parametres_generaux');
     if (!val) {
@@ -81,6 +132,7 @@ export class ParametresService {
         max_retraits_par_jour: 5,
         montant_max_par_retrait_fc: 500000,
         montant_max_par_retrait_usd: 500,
+        taux_usd_cdf: 2217.2680,
         heures_autorisees: { debut: '08:00', fin: '22:00' },
         motif_obligatoire: true,
         retraits: {
@@ -100,10 +152,13 @@ export class ParametresService {
       };
     }
     try {
-      return JSON.parse(val) as GeneralParameters;
+      const parsed = JSON.parse(val) as GeneralParameters;
+      // S'assurer que le taux existe même si le JSON est ancien
+      if (!parsed.taux_usd_cdf) parsed.taux_usd_cdf = 2217.2680;
+      return parsed;
     } catch {
       // Fallback if parsing fails
-      return {} as GeneralParameters;
+      return { taux_usd_cdf: 2217.2680 } as GeneralParameters;
     }
   }
 }

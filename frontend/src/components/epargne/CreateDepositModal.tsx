@@ -169,7 +169,8 @@ export default function CreateDepositModal({
                 Numéro de Compte
                 {isFetchingByZk && (
                   <span className="flex items-center gap-1 text-[10px] text-primary italic animate-pulse">
-                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> Identification...
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />{" "}
+                    Identification...
                   </span>
                 )}
               </label>
@@ -182,7 +183,8 @@ export default function CreateDepositModal({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] text-green-600 dark:text-green-400 font-bold uppercase tracking-wider">
-                      Scanné par : <span className="underline">{identifiedPerson.role}</span>
+                      Scanné par :{" "}
+                      <span className="underline">{identifiedPerson.role}</span>
                     </p>
                     <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                       {identifiedPerson.name}
@@ -193,24 +195,27 @@ export default function CreateDepositModal({
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="COOP-P-2026-0001 ou Nom..."
+                  placeholder="MW-PRI-A8K2Z9 ou Nom..."
                   autoComplete="off"
                   {...register("numeroCompte")}
                   onFocus={() => setShowSuggestions(true)}
-                  className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl focus:ring-2 transition-all font-semibold ${errors.numeroCompte
-                    ? "border-red-500 focus:ring-red-500/20 text-red-900"
-                    : "border-slate-200 dark:border-slate-700 focus:ring-primary/20"
-                    }`}
+                  className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl focus:ring-2 transition-all font-semibold ${
+                    errors.numeroCompte
+                      ? "border-red-500 focus:ring-red-500/20 text-red-900"
+                      : "border-slate-200 dark:border-slate-700 focus:ring-primary/20"
+                  }`}
                 />
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  {isSearching && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+                  {isSearching && (
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                  )}
                   <Search className="w-4 h-4 text-slate-300" />
                 </div>
               </div>
 
               {/* Liste de suggestions */}
               {showSuggestions && searchResults && searchResults.length > 0 && (
-                <div className="absolute z-[60] left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute z-60 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
                   {searchResults.map((member) => (
                     <button
                       key={member.id}

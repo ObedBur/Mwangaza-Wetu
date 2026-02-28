@@ -12,7 +12,7 @@ export class ZktecoService implements OnModuleDestroy {
   private isConnected = false;
 
   // Configuration de l'appareil
-  private readonly ip = '192.168.1.222';
+  private readonly ip = '192.168.10.222';
   private readonly port = 4370;
   private readonly timeout = 10000;
   private readonly inport = 4000; 

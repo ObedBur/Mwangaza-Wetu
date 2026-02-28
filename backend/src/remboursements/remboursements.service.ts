@@ -5,6 +5,7 @@ import { Devise, StatutCredit } from '@prisma/client';
 import {
   normalizeSectionName,
   getSectionLetter,
+  getSectionTrigram,
 } from '../common/constants/sections';
 
 @Injectable()
@@ -54,58 +55,9 @@ export class RemboursementsService {
         },
       });
 
-      // 2. Logique d'intérêts (10% système, 5% membre)
+
       const montantTotalAttendu =
         Number(credit.montant) * (1 + Number(credit.tauxInteret) / 100);
-      const proportion = montant / montantTotalAttendu;
-      const interetsRembourses =
-        proportion * Number(credit.montant) * (Number(credit.tauxInteret) / 100);
-
-      const interetSysteme = interetsRembourses * (10 / 15);
-      const interetMembre = interetsRembourses * (5 / 15);
-
-      // 3. Créditer le compte collectif (Principal)
-      const typeNormalise = normalizeSectionName(credit.membre.typeCompte);
-      const lettre = getSectionLetter(typeNormalise);
-      const year = credit.dateDebut.getFullYear();
-      const compteCollectif = `COOP-${lettre}-${year}-0000`;
-
-      await tx.epargne.create({
-        data: {
-          compte: compteCollectif,
-          typeOperation: 'depot',
-          devise: devise as Devise,
-          montant: montant - interetsRembourses,
-          dateOperation: dateR,
-          description: `Remboursement crédit #${creditId} - Principal`,
-        },
-      });
-
-      // 4. Créditer le membre (5%)
-      if (interetMembre > 0) {
-        await tx.epargne.create({
-          data: {
-            compte: credit.numeroCompte,
-            typeOperation: 'depot',
-            devise: devise as Devise,
-            montant: interetMembre,
-            dateOperation: dateR,
-            description: `Intérêts crédités sur remboursement #${remboursement.id}`,
-          },
-        });
-      }
-
-      // 5. Créditer COOP-REVENUS (10%)
-      await tx.epargne.create({
-        data: {
-          compte: 'COOP-REVENUS',
-          typeOperation: 'depot',
-          devise: devise as Devise,
-          montant: interetSysteme,
-          dateOperation: dateR,
-          description: `Revenus d'intérêts sur remboursement #${remboursement.id}`,
-        },
-      });
 
       // 6. Mettre à jour le crédit
       const aggregateResult = await tx.remboursement.aggregate({

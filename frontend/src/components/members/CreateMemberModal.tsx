@@ -257,7 +257,7 @@ export default function CreateMemberModal({
                           }`}
                       >
                         <span className="text-[10px] font-black leading-none">
-                          COOP-{type.prefix}
+                          MW-{type.prefix}
                         </span>
                         <span className="text-[10px] sm:text-xs font-bold uppercase truncate">
                           {type.label}
@@ -288,7 +288,7 @@ export default function CreateMemberModal({
                     )}
                   </div>
                   <p className="text-[10px] text-slate-500 italic">
-                    Ce numéro est généré automatiquement selon la section et l'année.
+                    Ce numéro est généré automatiquement avec un code de section et un identifiant aléatoire.
                   </p>
                 </div>
               </div>

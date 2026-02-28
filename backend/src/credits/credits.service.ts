@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCreditDto, StatutCredit } from './dto/create-credit.dto';
 import { Devise, StatutCredit as PrismaStatutCredit } from '@prisma/client';
+import { getSectionTrigram } from '../common/constants/sections';
 
 @Injectable()
 export class CreditsService {
@@ -80,9 +81,8 @@ export class CreditsService {
       });
 
       // 2. Enregistrer le retrait sur le compte collectif
-      const year = dateD.getFullYear();
-      const lettre = (membre.typeCompte[0] || 'P').toUpperCase();
-      const compteCollectif = `COOP-${lettre}-${year}-0000`;
+      const sectionTrigram = getSectionTrigram(membre.typeCompte);
+      const compteCollectif = `MW-${sectionTrigram}-SECTION-0000`;
 
       await tx.epargne.create({
         data: {

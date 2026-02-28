@@ -40,7 +40,7 @@ export default function AuthForm({
       <div>
         <AuthInput
           label="Email ou Numéro de compte"
-          placeholder="ex: jean@mwangaza.cd ou COOP-P-2026-0001"
+          placeholder="ex: jean@mwangaza.cd ou MW-PRI-A8K2Z9"
           icon="badge"
           helperText="Saisissez votre identifiant pour vous connecter"
           required

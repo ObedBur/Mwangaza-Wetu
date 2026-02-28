@@ -21,7 +21,7 @@ export class SavingsService {
     }
     // Jamais afficher les transactions du compte collectif dans le tableau général
     where.NOT = [
-      { compte: 'COOP-REVENUS' },
+      { compte: 'MW-REVENUS-GLOBAL' },
       { compte: { contains: 'SECTION-0000' } },
     ];
 

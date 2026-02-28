@@ -15,11 +15,11 @@ export class AdminsService {
 
   async getLastAdminNumber() {
     const lastAdmin = await this.prisma.administrateur.findFirst({
-      where: { numeroCompte: { startsWith: 'COOP-A-' } },
+      where: { numeroCompte: { startsWith: 'MW-A-' } },
       orderBy: { id: 'desc' },
     });
     const lastSuperAdmin = await this.prisma.administrateur.findFirst({
-      where: { numeroCompte: { startsWith: 'COOP-SA-' } },
+      where: { numeroCompte: { startsWith: 'MW-SA-' } },
       orderBy: { id: 'desc' },
     });
 

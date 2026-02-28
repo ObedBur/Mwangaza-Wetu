@@ -11,6 +11,12 @@ export class ParametresController {
     return this.parametresService.findAll();
   }
 
+  @Get('sync-taux')
+  async syncTaux() {
+    const rate = await this.parametresService.syncExchangeRate();
+    return { success: rate > 0, rate };
+  }
+
   @Get(':nom')
   async findOne(@Param('nom') nom: string) {
     return this.parametresService.findByName(nom);

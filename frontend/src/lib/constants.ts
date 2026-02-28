@@ -6,12 +6,12 @@ export const CURRENCIES = [
 export type CurrencyValue = (typeof CURRENCIES)[number]["value"];
 
 export const ACCOUNT_TYPES = [
-  { value: "PRINCIPAL", label: "Épargne", prefix: "P" },
-  { value: "KELASI", label: "Scolaire", prefix: "K" },
-  { value: "NYUMBA", label: "Logement", prefix: "N" },
-  { value: "HOPITAL", label: "Santé", prefix: "H" },
-  { value: "MUTOTO", label: "Junior", prefix: "M" },
-  { value: "BIASHARA", label: "Affaires", prefix: "B" },
+  { value: "PRINCIPAL", label: "Épargne", prefix: "PRI" },
+  { value: "KELASI", label: "Scolaire", prefix: "KEL" },
+  { value: "NYUMBA", label: "Logement", prefix: "NYU" },
+  { value: "HOPITAL", label: "Santé", prefix: "HOP" },
+  { value: "MUTOTO", label: "Junior", prefix: "MUT" },
+  { value: "BIASHARA", label: "Affaires", prefix: "BIA" },
 ] as const;
 
 export type AccountTypeValue = (typeof ACCOUNT_TYPES)[number]["value"];
