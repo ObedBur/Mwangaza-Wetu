@@ -13,7 +13,7 @@ import { CreateSavingsDto, TypeOperation } from './dto/create-savings.dto';
 
 @Controller('api/epargnes')
 export class SavingsController {
-  constructor(private readonly savingsService: SavingsService) {}
+  constructor(private readonly savingsService: SavingsService) { }
 
   @Get()
   async findAll(
@@ -36,7 +36,7 @@ export class SavingsController {
     return this.savingsService.findAll({
       page: page ? parseInt(page) : 1,
       pageSize: pageSize ? parseInt(pageSize) : 10,
-      type: TypeOperation.DEPOT,
+      type: TypeOperation.depot,
     });
   }
 
@@ -48,7 +48,7 @@ export class SavingsController {
     return this.savingsService.findAll({
       page: page ? parseInt(page) : 1,
       pageSize: pageSize ? parseInt(pageSize) : 10,
-      type: TypeOperation.RETRAIT,
+      type: TypeOperation.retrait,
     });
   }
 

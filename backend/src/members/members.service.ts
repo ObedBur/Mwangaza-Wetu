@@ -19,7 +19,7 @@ import { Prisma, StatutMembre as PrismaStatutMembre, Devise } from '@prisma/clie
 @Injectable()
 export class MembersService {
   private readonly logger = new Logger(MembersService.name);
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   private readonly uploadsDir = path.join(process.cwd(), 'uploads');
 
@@ -67,7 +67,9 @@ export class MembersService {
     const where: any = {
       NOT: [
         { numeroCompte: { contains: 'SECTION-0000' } },
-        { numeroCompte: 'MW-REVENUS-GLOBAL' },
+        { numeroCompte: { contains: 'REVENUS' } },
+        { numeroCompte: { contains: 'CREDITS' } },
+        { numeroCompte: { contains: 'TRESORERIE' } },
       ],
     };
 
@@ -220,7 +222,7 @@ export class MembersService {
           typeCompte: typeNormalise, // Utiliser la valeur normalisée
           statut: createMemberDto.statut as PrismaStatutMembre,
           photoProfil: photoFileName,
-          userId: createMemberDto.userId || null, 
+          userId: createMemberDto.userId || null,
           dateAdhesion: new Date(dateAdhesion),
           motDePasse: hashedPassword,
           dateNaissance: createMemberDto.dateNaissance
@@ -251,7 +253,7 @@ export class MembersService {
         // 2. Enregistrement sur le compte de REVENUS de la section
         const sectionTrigram = getSectionTrigram(typeNormalise);
         const revenueAccount = `MW-${sectionTrigram}-REVENUS`;
-        
+
         await tx.epargne.create({
           data: {
             compte: revenueAccount,
@@ -275,7 +277,7 @@ export class MembersService {
           },
         });
       }
-     
+
       // 2. Gérer le délégué
       if (delegue) {
         const deleguePhotoFileName = this.saveBase64Image(
@@ -314,7 +316,7 @@ export class MembersService {
         .substring(2, 8)
         .toUpperCase()
         .padEnd(6, '0');
-      
+
       finalNumero = `MW-${sectionTrigram}-${randomPart}`;
 
       // Vérifier l'unicité
@@ -481,7 +483,7 @@ export class MembersService {
   }
 
   async remove(id: number) {
-    const membre = await this.prisma.membre.findUnique({ 
+    const membre = await this.prisma.membre.findUnique({
       where: { id },
       include: {
         epargnes: { take: 1 },
@@ -494,9 +496,9 @@ export class MembersService {
 
     // Empêcher la suppression des comptes système
     if (
-      membre.numeroCompte === 'MW-REVENUS-GLOBAL' || 
+      membre.numeroCompte === 'MW-REVENUS-GLOBAL' ||
       membre.numeroCompte.includes('SECTION-0000') ||
-      membre.numeroCompte.includes('-REVENUS') || 
+      membre.numeroCompte.includes('-REVENUS') ||
       membre.typeCompte === 'SYSTEME'
     ) {
       throw new BadRequestException('Impossible de supprimer un compte système.');
@@ -504,8 +506,8 @@ export class MembersService {
 
     // Empêcher la suppression si le membre a des transactions
     if (
-      membre.epargnes.length > 0 || 
-      membre.retraits.length > 0 || 
+      membre.epargnes.length > 0 ||
+      membre.retraits.length > 0 ||
       membre.credits.length > 0
     ) {
       throw new BadRequestException('Ce membre a des transactions enregistrées. Veuillez le désactiver plutôt que de le supprimer.');
@@ -527,7 +529,9 @@ export class MembersService {
     const filter = {
       NOT: [
         { numeroCompte: { contains: 'SECTION-0000' } },
-        { numeroCompte: 'MW-REVENUS-GLOBAL' },
+        { numeroCompte: { contains: 'REVENUS' } },
+        { numeroCompte: { contains: 'CREDITS' } },
+        { numeroCompte: { contains: 'TRESORERIE' } },
       ],
     };
 

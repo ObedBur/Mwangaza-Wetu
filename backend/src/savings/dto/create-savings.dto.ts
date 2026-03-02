@@ -5,16 +5,9 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
+import { TypeOperationEpargne as TypeOperation, Devise } from '@prisma/client';
 
-export enum TypeOperation {
-  DEPOT = 'depot',
-  RETRAIT = 'retrait',
-}
-
-export enum Devise {
-  FC = 'FC',
-  USD = 'USD',
-}
+export { TypeOperation, Devise };
 
 export class CreateSavingsDto {
   @IsString()

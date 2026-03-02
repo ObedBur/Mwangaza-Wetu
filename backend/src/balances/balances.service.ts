@@ -4,7 +4,38 @@ import { Devise, TypeOperationEpargne } from '@prisma/client';
 
 @Injectable()
 export class BalancesService {
-  constructor(private prisma: PrismaService) {}
+    /**
+     * Recalcule et retourne la garantie gelée pour un membre (tous crédits actifs)
+     */
+    async rafraichirGarantie(membreId: number, tauxGarantie = 0.3) {
+      // Récupérer le numéro de compte du membre
+      const membre = await this.prisma.membre.findUnique({
+        where: { id: membreId },
+        select: { numeroCompte: true },
+      });
+      if (!membre) throw new Error('Membre non trouvé');
+
+      // Récupérer tous les crédits actifs du membre
+      const creditsActifs = await this.prisma.credit.findMany({
+        where: { numeroCompte: membre.numeroCompte, statut: 'actif' },
+        select: { montant: true, montantRembourse: true, devise: true },
+      });
+
+      // Calculer la garantie gelée (somme des encours × tauxGarantie)
+      const garantieFC = creditsActifs
+        .filter((c) => c.devise === 'FC')
+        .reduce((sum, c) => sum + (Number(c.montant) - Number(c.montantRembourse)) * tauxGarantie, 0);
+
+      const garantieUSD = creditsActifs
+        .filter((c) => c.devise === 'USD')
+        .reduce((sum, c) => sum + (Number(c.montant) - Number(c.montantRembourse)) * tauxGarantie, 0);
+
+      return {
+        fc: Math.round(garantieFC * 100) / 100,
+        usd: Math.round(garantieUSD * 100) / 100,
+      };
+    }
+  constructor(private prisma: PrismaService) { }
 
   async getTotal() {
     const epargneStats = await this.prisma.epargne.groupBy({
@@ -157,5 +188,133 @@ export class BalancesService {
     );
 
     return { rows, aggregate };
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // TRÉSORERIE DISPONIBLE POUR PRÊTS
+  // Formule : (Total Épargnes - Total Retraits - Frais) - 20% réserve - Crédits actifs non remboursés
+  // ────────────────────────────────────────────────────────────────────
+  async getTresorerieDisponible() {
+    const TAUX_RESERVE = 0.20; // 20% de réserve obligatoire
+
+    const totals = await this.getTotal();
+
+    // Crédits actifs non remboursés (montant - montantRembourse)
+    const creditsActifs = await this.prisma.credit.findMany({
+      where: { statut: 'actif' },
+      select: { montant: true, montantRembourse: true, devise: true },
+    });
+
+    const encoursCreditFC = creditsActifs
+      .filter((c) => c.devise === 'FC')
+      .reduce((sum, c) => sum + (Number(c.montant) - Number(c.montantRembourse)), 0);
+
+    const encoursCreditUSD = creditsActifs
+      .filter((c) => c.devise === 'USD')
+      .reduce((sum, c) => sum + (Number(c.montant) - Number(c.montantRembourse)), 0);
+
+    // Caisse réelle = solde des épargnes (dépôts - retraits - frais)
+    const caisseFC = totals.fc.solde;
+    const caisseUSD = totals.usd.solde;
+
+    // Réserve obligatoire de 20%
+    const reserveFC = caisseFC * TAUX_RESERVE;
+    const reserveUSD = caisseUSD * TAUX_RESERVE;
+
+    // Trésorerie disponible = Caisse - Réserve - Encours crédits
+    const disponibleFC = caisseFC - reserveFC - encoursCreditFC;
+    const disponibleUSD = caisseUSD - reserveUSD - encoursCreditUSD;
+
+    return {
+      fc: {
+        caisse: caisseFC,
+        reserve: Math.round(reserveFC * 100) / 100,
+        encoursCredits: encoursCreditFC,
+        disponible: Math.round(Math.max(0, disponibleFC) * 100) / 100,
+      },
+      usd: {
+        caisse: caisseUSD,
+        reserve: Math.round(reserveUSD * 100) / 100,
+        encoursCredits: encoursCreditUSD,
+        disponible: Math.round(Math.max(0, disponibleUSD) * 100) / 100,
+      },
+    };
+  }
+
+  // ────────────────────────────────────────────────────────────────────
+  // SOLDE DISPONIBLE D'UN MEMBRE (avec nantissement/garantie)
+  // Si le membre a un crédit actif, une partie de son épargne est gelée
+  // en guise de garantie (= montant du crédit non encore remboursé * tauxGarantie)
+  // ────────────────────────────────────────────────────────────────────
+  async getSoldeDisponibleMembre(numeroCompte: string, tauxGarantie = 0.30) {
+    // 1. Calculer le solde brut d'épargne du membre
+    const epargneStats = await this.prisma.epargne.groupBy({
+      by: ['typeOperation', 'devise'],
+      where: { compte: numeroCompte },
+      _sum: { montant: true },
+    });
+
+    const getEpargneSum = (devise: Devise, type: TypeOperationEpargne) => {
+      const item = epargneStats.find(
+        (s) => s.devise === devise && s.typeOperation === type,
+      );
+      return Number(item?._sum?.montant || 0);
+    };
+
+    const fraisStats = await this.prisma.retrait.groupBy({
+      by: ['devise'],
+      where: { compte: numeroCompte },
+      _sum: { frais: true },
+    });
+
+    const getFrais = (devise: Devise) => {
+      const item = fraisStats.find((s) => s.devise === devise);
+      return Number(item?._sum?.frais || 0);
+    };
+
+    const soldeBrutFC =
+      getEpargneSum(Devise.FC, TypeOperationEpargne.depot) -
+      getEpargneSum(Devise.FC, TypeOperationEpargne.retrait) -
+      getFrais(Devise.FC);
+
+    const soldeBrutUSD =
+      getEpargneSum(Devise.USD, TypeOperationEpargne.depot) -
+      getEpargneSum(Devise.USD, TypeOperationEpargne.retrait) -
+      getFrais(Devise.USD);
+
+    // 2. Calculer la garantie gelée (encours crédits actifs * tauxGarantie)
+    const creditsActifs = await this.prisma.credit.findMany({
+      where: { numeroCompte, statut: 'actif' },
+      select: { montant: true, montantRembourse: true, devise: true },
+    });
+
+    const garantieFC = creditsActifs
+      .filter((c) => c.devise === 'FC')
+      .reduce(
+        (sum, c) =>
+          sum + (Number(c.montant) - Number(c.montantRembourse)) * tauxGarantie,
+        0,
+      );
+
+    const garantieUSD = creditsActifs
+      .filter((c) => c.devise === 'USD')
+      .reduce(
+        (sum, c) =>
+          sum + (Number(c.montant) - Number(c.montantRembourse)) * tauxGarantie,
+        0,
+      );
+
+    return {
+      fc: {
+        soldeBrut: Math.round(soldeBrutFC * 100) / 100,
+        garantieGelee: Math.round(garantieFC * 100) / 100,
+        soldeDisponible: Math.round(Math.max(0, soldeBrutFC - garantieFC) * 100) / 100,
+      },
+      usd: {
+        soldeBrut: Math.round(soldeBrutUSD * 100) / 100,
+        garantieGelee: Math.round(garantieUSD * 100) / 100,
+        soldeDisponible: Math.round(Math.max(0, soldeBrutUSD - garantieUSD) * 100) / 100,
+      },
+    };
   }
 }

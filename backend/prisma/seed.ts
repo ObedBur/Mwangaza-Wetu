@@ -65,7 +65,7 @@ async function main() {
         { nom: 'BIASHARA', code: 'BIA' },
         { nom: 'MUTOTO', code: 'MUT' },
     ];
-    
+
     for (const sec of sections) {
         const sectionTrigram = sec.code;
         const compteCollectif = `MW-${sectionTrigram}-SECTION-0000`;
@@ -109,7 +109,23 @@ async function main() {
                 statut: 'actif',
             }
         });
-        console.log(`✅ Section ${sec.nom} prête (Collectif: ${compteCollectif}, Revenus: ${revenueAccount})`);
+
+        // 4. Créer le compte de CRÉDITS (transit trésorerie) de la section
+        const creditAccount = `MW-${sectionTrigram}-CREDITS`;
+        await prisma.membre.upsert({
+            where: { numeroCompte: creditAccount },
+            update: {},
+            create: {
+                numeroCompte: creditAccount,
+                nomComplet: `CRÉDITS ${sec.nom}`,
+                typeCompte: sec.nom,
+                telephone: '000000',
+                dateAdhesion: new Date(),
+                statut: 'actif',
+            }
+        });
+
+        console.log(`✅ Section ${sec.nom} prête (Collectif: ${compteCollectif}, Revenus: ${revenueAccount}, Crédits: ${creditAccount})`);
     }
 
     // --- INITIALISATION DES TYPES DE REVENUS ---
@@ -117,8 +133,8 @@ async function main() {
     const revenueTypes = [
         { nom: 'Système Épargne', description: 'Revenus issus des adhésions et dépôts courants' },
         { nom: 'Système Retrait', description: 'Revenus issus des frais de retrait' },
-        { nom: 'Système Crédit',  description: 'Revenus issus des frais d\'octroi de crédit' },
-        { nom: 'Système Remboursement', description: 'Revenus issus des intérêts sur remboursements (15%)' },
+        { nom: 'Système Crédit', description: 'Revenus issus des frais d\'octroi de crédit' },
+        { nom: 'Système Remboursement', description: 'Revenus issus des intérêts sur remboursements' },
     ];
 
     for (const type of revenueTypes) {
@@ -133,13 +149,27 @@ async function main() {
     }
     console.log('✅ Types de revenus prêts.');
 
-    // Création du compte GLOBAL CONSOLIDÉ
+    // Création du compte GLOBAL CONSOLIDÉ (REVENUS)
     await prisma.membre.upsert({
         where: { numeroCompte: 'MW-REVENUS-GLOBAL' },
         update: {},
         create: {
             numeroCompte: 'MW-REVENUS-GLOBAL',
             nomComplet: 'REVENUS GLOBAL CONSOLIDÉ',
+            typeCompte: 'SYSTEME',
+            telephone: '000000',
+            dateAdhesion: new Date(),
+            statut: 'actif'
+        }
+    });
+
+    // Création du compte GLOBAL TRÉSORERIE CRÉDITS
+    await prisma.membre.upsert({
+        where: { numeroCompte: 'MW-TRESORERIE-CREDITS' },
+        update: {},
+        create: {
+            numeroCompte: 'MW-TRESORERIE-CREDITS',
+            nomComplet: 'TRÉSORERIE CRÉDITS GLOBAL',
             typeCompte: 'SYSTEME',
             telephone: '000000',
             dateAdhesion: new Date(),

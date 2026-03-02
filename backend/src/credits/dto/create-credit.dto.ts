@@ -1,10 +1,8 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsEnum } from 'class-validator';
 
-export enum StatutCredit {
-  ACTIF = 'actif',
-  REMBOURSE = 'rembourse',
-  EN_RETARD = 'en_retard',
-}
+// On utilise directement l'enum Prisma pour éviter la duplication.
+// L'enum est ré-exporté ici pour le confort d'import dans les autres fichiers.
+export { StatutCredit } from '@prisma/client';
 
 export class CreateCreditDto {
   @IsString()
@@ -20,8 +18,8 @@ export class CreateCreditDto {
   devise: string;
 
   @IsNumber()
-  @IsNotEmpty()
-  tauxInteret: number;
+  @IsOptional()
+  tauxInteret?: number;
 
   @IsNumber()
   @IsNotEmpty()

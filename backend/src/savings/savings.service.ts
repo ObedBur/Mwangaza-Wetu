@@ -12,7 +12,7 @@ export class SavingsService {
   constructor(
     private prisma: PrismaService,
     private parametresService: ParametresService,
-  ) {}
+  ) { }
 
   async findAll(params: { page?: number; pageSize?: number; type?: TypeOperation }) {
     const { page = 1, pageSize = 10, type } = params;
@@ -22,11 +22,12 @@ export class SavingsService {
     if (type) {
       where.typeOperation = type as unknown as PrismaTypeOperation;
     }
-    // Jamais afficher les transactions du compte collectif dans le tableau général
+    // Jamais afficher les transactions des comptes système dans le tableau général
     where.NOT = [
-      { compte: 'MW-REVENUS-GLOBAL' },
       { compte: { contains: 'REVENUS' } },
       { compte: { contains: 'SECTION-0000' } },
+      { compte: { contains: 'CREDITS' } },
+      { compte: { contains: 'TRESORERIE' } },
     ];
 
     const [total, data] = await Promise.all([
@@ -155,7 +156,7 @@ export class SavingsService {
     const { typeOperation, devise, montant } = createDto;
 
     // Validation du montant minimum pour les dépôts
-    if (typeOperation === TypeOperation.DEPOT) {
+    if (typeOperation === TypeOperation.depot) {
       const params = await this.parametresService.getGeneralParameters();
       const montantMin =
         (devise as unknown as Devise) === Devise.FC
