@@ -5,21 +5,13 @@ import {
   Body,
   Param,
   ParseIntPipe,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
 import { CreditsService } from './credits.service';
-import { RemboursementsService } from '../remboursements/remboursements.service';
 import { CreateCreditDto } from './dto/create-credit.dto';
-import { CreateRemboursementDto } from '../remboursements/dto/create-remboursement.dto';
 
 @Controller('api/credits')
 export class CreditsController {
-  constructor(
-    private readonly creditsService: CreditsService,
-    @Inject(forwardRef(() => RemboursementsService))
-    private readonly remboursementsService: RemboursementsService,
-  ) {}
+  constructor(private readonly creditsService: CreditsService) {}
 
   @Get()
   async findAll() {
@@ -44,10 +36,5 @@ export class CreditsController {
   @Post()
   async create(@Body() createDto: CreateCreditDto) {
     return this.creditsService.create(createDto);
-  }
-
-  @Post('remboursements')
-  async addRemboursement(@Body() dto: CreateRemboursementDto) {
-    return this.remboursementsService.create(dto);
   }
 }

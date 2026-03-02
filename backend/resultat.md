@@ -1,263 +1,43 @@
 HTTP/1.1 200 OK
 X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
 Vary: Origin
 Access-Control-Allow-Credentials: true
 Content-Type: application/json; charset=utf-8
-Content-Length: 2
-ETag: W/"2-l9Fw4VUO7kr8CvBlt4zaMCqXZ0w"
-Date: Wed, 25 Feb 2026 14:48:35 GMT
-Connection: close
-
-[]
-
-,
-
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 74
-ETag: W/"4a-SvEb6xUBeUjQTkzFpZJ7dw5e5Cs"
-Date: Wed, 25 Feb 2026 14:49:03 GMT
+Content-Length: 24
+ETag: W/"18-5G88UHUWReirJ5O+VHitIEcsqr8"
+Date: Sat, 28 Feb 2026 13:34:24 GMT
 Connection: close
 
 {
-  "total": 0,
-  "actifs": 0,
-  "inactifs": 0,
-  "hommes": 0,
-  "femmes": 0,
-  "typeComptes": []
-} ,
+  "numero": "MW-P-MUSLTM"
+}  
 
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 36
-ETag: W/"24-sQsralk/UZqdMsBqRFBTH+myDxo"
-Date: Wed, 25 Feb 2026 14:49:22 GMT
-Connection: close
+{"nextNumber":1}
 
-{
-  "numero_compte": "COOP-E-2026-0001"
-} ,
+{"exists":true,"where":"membre"}
 
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 16
-ETag: W/"10-0UPgAAWCfq1jH18/CPcRCBXPkKM"
-Date: Wed, 25 Feb 2026 14:50:32 GMT
-Connection: close
+{"id":22,"numeroCompte":"MW-PRI-HJMK5J","nomComplet":"Jean-Luc Mwangaza","dateAdhesion":"2026-02-28T00:00:00.000Z","telephone":"0810001111","email":"jeanluc@mwangaza.cd","adresse":"Goma, Quartier Himbi","sexe":"M","typeCompte":"PRINCIPAL","statut":"actif","photoProfil":null,"userId":"3","motDePasse":null,"dateNaissance":null,"idNationale":"ID-GOMA-999","createdAt":"2026-02-28T13:41:22.996Z","updatedAt":"2026-02-28T13:41:22.996Z"}
 
-{
-  "nextNumber": 1
-} 
+{"id":23,"numeroCompte":"MW-KEL-VNXJ3S","nomComplet":"Test Minimal","dateAdhesion":"2026-02-28T00:00:00.000Z","telephone":"0820002222","email":null,"adresse":null,"sexe":null,"typeCompte":"KELASI","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T13:41:46.530Z","updatedAt":"2026-02-28T13:41:46.530Z"}
 
-HTTP/1.1 201 Created
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 555
-ETag: W/"22b-0zjnm2T3JzopGjqfK3ToS6AW0uo"
-Date: Wed, 25 Feb 2026 14:50:53 GMT
-Connection: close
+{"id":1,"numeroCompte":"COOP-P-SECTION-0000","nomComplet":"Compte Collectif PRINCIPAL","dateAdhesion":"2026-02-28T07:24:02.642Z","telephone":"0000000000","email":null,"adresse":"Goma","sexe":null,"typeCompte":"PRINCIPAL","statut":"inactif","photoProfil":null,"userId":null,"motDePasse":"collectif","dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T07:24:02.680Z","updatedAt":"2026-02-28T13:42:15.664Z"}
 
-{
-  "id": 2,
-  "numeroCompte": "COOP-E-2026-TEST-1772031052",
-  "nomComplet": "Jean Mutombo Test",
-  "dateAdhesion": "2026-02-25T14:50:52.783Z",
-  "telephone": "0991234567",
-  "email": "jean.test.1772031052@mwangaza.cd",
-  "adresse": "Avenue Bukavu, Goma",
-  "sexe": "M",
-  "typeCompte": "Epargne",
-  "statut": "actif",
-  "photoProfil": null,
-  "userId": "test-1772031052",
-  "motDePasse": "$2b$10$4ZXDzSDvAGqFC4/w4MUCBeMLct.brukQvptV3LL.KufJI3VzPiBfW",
-  "dateNaissance": "1990-05-15T00:00:00.000Z",
-  "idNationale": "CD-NK-1772031052",
-  "createdAt": "2026-02-25T14:50:53.044Z",
-  "updatedAt": "2026-02-25T14:50:53.044Z"
-}
 
-HTTP/1.1 400 Bad Request
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 82
-ETag: W/"52-ZZqxV9YEzKMSc/e77k6mDb48z3s"
-Date: Wed, 25 Feb 2026 14:51:25 GMT
-Connection: close
+{"id":1,"numeroCompte":"COOP-P-SECTION-0000","nomComplet":"Compte Collectif PRINCIPAL","dateAdhesion":"2026-02-28T07:24:02.642Z","telephone":"0000000000","email":null,"adresse":"Goma","sexe":null,"typeCompte":"PRINCIPAL","statut":"inactif","photoProfil":null,"userId":null,"motDePasse":"collectif","dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T07:24:02.680Z","updatedAt":"2026-02-28T13:42:59.105Z"}{"statusCode":500,"message":"Internal server error"}
 
-{
-  "message": "Code de confirmation invalide",
-  "error": "Bad Request",
-  "statusCode": 400
-} 
+{"data":[{"id":20,"numeroCompte":"MW-MUT-REVENUS","nomComplet":"REVENUS MUTOTO","dateAdhesion":"2026-02-28T12:43:22.743Z","telephone":"000000","email":null,"adresse":null,"sexe":null,"typeCompte":"MUTOTO","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T12:43:22.744Z","updatedAt":"2026-02-28T12:43:22.744Z","delegues":[]},{"id":18,"numeroCompte":"MW-BIA-REVENUS","nomComplet":"REVENUS BIASHARA","dateAdhesion":"2026-02-28T12:43:22.718Z","telephone":"000000","email":null,"adresse":null,"sexe":null,"typeCompte":"BIASHARA","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T12:43:22.718Z","updatedAt":"2026-02-28T12:43:22.718Z","delegues":[]},{"id":16,"numeroCompte":"MW-HOP-REVENUS","nomComplet":"REVENUS HOPITAL","dateAdhesion":"2026-02-28T12:43:22.705Z","telephone":"000000","email":null,"adresse":null,"sexe":null,"typeCompte":"HOPITAL","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T12:43:22.705Z","updatedAt":"2026-02-28T12:43:22.705Z","delegues":[]},{"id":14,"numeroCompte":"MW-NYU-REVENUS","nomComplet":"REVENUS NYUMBA","dateAdhesion":"2026-02-28T12:43:22.541Z","telephone":"000000","email":null,"adresse":null,"sexe":null,"typeCompte":"NYUMBA","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T12:43:22.541Z","updatedAt":"2026-02-28T12:43:22.541Z","delegues":[]},{"id":12,"numeroCompte":"MW-KEL-REVENUS","nomComplet":"REVENUS KELASI","dateAdhesion":"2026-02-28T12:43:22.521Z","telephone":"000000","email":null,"adresse":null,"sexe":null,"typeCompte":"KELASI","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T12:43:22.522Z","updatedAt":"2026-02-28T12:43:22.522Z","delegues":[]},{"id":10,"numeroCompte":"MW-PRI-REVENUS","nomComplet":"REVENUS PRINCIPAL","dateAdhesion":"2026-02-28T12:43:22.349Z","telephone":"000000","email":null,"adresse":null,"sexe":null,"typeCompte":"PRINCIPAL","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T12:43:22.350Z","updatedAt":"2026-02-28T12:43:22.350Z","delegues":[]},{"id":8,"numeroCompte":"COOP-REVENUS-GLOBAL","nomComplet":"COOPERATIVE REVENUS GLOBAL","dateAdhesion":"2026-02-28T08:57:07.475Z","telephone":"0000000000","email":null,"adresse":null,"sexe":"M","typeCompte":"SYSTEME","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T08:57:11.167Z","updatedAt":"2026-02-28T08:57:11.167Z","delegues":[]},{"id":6,"numeroCompte":"COOP-EPARGNE-REVENUS","nomComplet":"COOPERATIVE REVENUS (EPARGNE)","dateAdhesion":"2026-02-28T08:57:07.475Z","telephone":"0000000000","email":null,"adresse":null,"sexe":"M","typeCompte":"SYSTEME","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T08:57:10.331Z","updatedAt":"2026-02-28T08:57:10.331Z","delegues":[]},{"id":7,"numeroCompte":"COOP-CREDIT-REVENUS","nomComplet":"COOPERATIVE REVENUS (CREDIT)","dateAdhesion":"2026-02-28T08:57:07.475Z","telephone":"0000000000","email":null,"adresse":null,"sexe":"M","typeCompte":"SYSTEME","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T08:57:11.009Z","updatedAt":"2026-02-28T08:57:11.009Z","delegues":[]},{"id":3,"numeroCompte":"COOP-REVENUS","nomComplet":"COOPERATIVE REVENUS (FRAIS)","dateAdhesion":"2026-02-28T08:38:22.814Z","telephone":"0000000000","email":null,"adresse":null,"sexe":"M","typeCompte":"SYSTEME","statut":"actif","photoProfil":null,"userId":null,"motDePasse":null,"dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T08:39:18.301Z","updatedAt":"2026-02-28T08:39:18.301Z","delegues":[]}],"meta":{"total":14,"page":1,"pageSize":10,"totalPages":2,"hasNextPage":true,"hasPrevPage":false}}
+  
 
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 29
-ETag: W/"1d-kRBz/8BemPtBoSvqmqwYskJYLzc"
-Date: Wed, 25 Feb 2026 14:51:38 GMT
-Connection: close
+{"total":14,"actifs":14,"inactifs":0,"hommes":7,"femmes":0,"typeComptes":[{"_count":{"_all":1},"typeCompte":"HOPITAL"},{"_count":{"_all":3},"typeCompte":"PRINCIPAL"},{"_count":{"_all":1},"typeCompte":"BIASHARA"},{"_count":{"_all":5},"typeCompte":"SYSTEME"},{"_count":{"_all":1},"typeCompte":"NYUMBA"},{"_count":{"_all":1},"typeCompte":"MUTOTO"},{"_count":{"_all":2},"typeCompte":"KELASI"}]}
 
-{
-  "exists": false,
-  "where": null
-} 
+{"id":1,"numeroCompte":"COOP-P-SECTION-0000","nomComplet":"Compte Collectif PRINCIPAL","dateAdhesion":"2026-02-28T07:24:02.642Z","telephone":"0000000000","email":null,"adresse":"Goma","sexe":null,"typeCompte":"PRINCIPAL","statut":"inactif","photoProfil":null,"userId":null,"motDePasse":"collectif","dateNaissance":null,"idNationale":null,"createdAt":"2026-02-28T07:24:02.680Z","updatedAt":"2026-02-28T13:42:59.105Z","delegues":[]}
 
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 175
-ETag: W/"af-4OA+1U5Pau5pKQMdf6YO0TWsx74"
-Date: Wed, 25 Feb 2026 14:51:53 GMT
-Connection: close
+{"id":2,"numeroCompte":"COOP-P-2026-0001","nomComplet":"wapi beiapp","dateAdhesion":"2026-02-28T00:00:00.000Z","telephone":"0974927593","email":null,"adresse":"Majengo 115","sexe":"M","typeCompte":"PRINCIPAL","statut":"actif","photoProfil":"photo_1772263442988.png","userId":"1","motDePasse":null,"dateNaissance":null,"idNationale":"12345678901","createdAt":"2026-02-28T07:24:03.001Z","updatedAt":"2026-02-28T07:24:03.001Z","delegues":[{"id":1,"membreId":2,"nom":"wapi beiapp","telephone":"0974927592","relation":"Frère/Sœur","pieceIdentite":"12345678902","userId":"2","photoProfil":"photo_delegue_1772263444971.png","createdAt":"2026-02-28T07:24:05.021Z"}]}
 
-[
-  {
-    "id": 1,
-    "numero_compte": "COOP-E-2026-0000",
-    "nom_complet": "Compte Collectif EPARGNE"
-  },
-  {
-    "id": 2,
-    "numero_compte": "COOP-E-2026-TEST-1772031052",
-    "nom_complet": "Jean Mutombo Test"
-  }
-] 
+{"soldeFC":2000,"soldeUSD":0}
 
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 163
-ETag: W/"a3-QCSoaw4ALDZxqt66v0k/kyE7iw8"
-Date: Wed, 25 Feb 2026 14:52:06 GMT
-Connection: close
+[{"id":16,"compte":"MW-PRI-REVENUS","typeOperation":"depot","devise":"FC","montant":"2000","dateOperation":"2026-02-28T00:00:00.000Z","description":"Frais d'adhésion membre MW-PRI-HJMK5J","createdAt":"2026-02-28T13:41:24.759Z"}]
 
-{
-  "total": 2,
-  "actifs": 2,
-  "inactifs": 0,
-  "hommes": 1,
-  "femmes": 0,
-  "typeComptes": [
-    {
-      "_count": {
-        "_all": 1
-      },
-      "typeCompte": "Epargne"
-    },
-    {
-      "_count": {
-        "_all": 1
-      },
-      "typeCompte": "EPARGNE"
-    }
-  ]
-} 
+{"soldeFC":4000,"soldeUSD":0}
 
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 427
-ETag: W/"1ab-lDGebmP1GxjnVVI1Ect/yya4Cog"
-Date: Wed, 25 Feb 2026 14:52:18 GMT
-Connection: close
-
-{
-  "id": 1,
-  "numeroCompte": "COOP-E-2026-0000",
-  "nomComplet": "Compte Collectif EPARGNE",
-  "dateAdhesion": "2026-02-25T14:50:52.878Z",
-  "telephone": "0998877665",
-  "email": null,
-  "adresse": "Avenue des Volcans, Goma",
-  "sexe": null,
-  "typeCompte": "EPARGNE",
-  "statut": "actif",
-  "photoProfil": null,
-  "userId": null,
-  "motDePasse": "collectif",
-  "dateNaissance": null,
-  "idNationale": null,
-  "createdAt": "2026-02-25T14:50:52.879Z",
-  "updatedAt": "2026-02-25T14:52:18.831Z"
-}
-
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 52
-ETag: W/"34-zNBqcqs1Xej/7deHvoDxlqA441w"
-Date: Wed, 25 Feb 2026 14:52:41 GMT
-Connection: close
-
-{
-  "success": false,
-  "message": "Délégué non trouvé"
-}
-
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Access-Control-Allow-Origin: http://localhost:3001
-Vary: Origin
-Access-Control-Allow-Credentials: true
-Content-Type: application/json; charset=utf-8
-Content-Length: 427
-ETag: W/"1ab-lDGebmP1GxjnVVI1Ect/yya4Cog"
-Date: Wed, 25 Feb 2026 14:52:54 GMT
-Connection: close
-
-{
-  "id": 1,
-  "numeroCompte": "COOP-E-2026-0000",
-  "nomComplet": "Compte Collectif EPARGNE",
-  "dateAdhesion": "2026-02-25T14:50:52.878Z",
-  "telephone": "0998877665",
-  "email": null,
-  "adresse": "Avenue des Volcans, Goma",
-  "sexe": null,
-  "typeCompte": "EPARGNE",
-  "statut": "actif",
-  "photoProfil": null,
-  "userId": null,
-  "motDePasse": "collectif",
-  "dateNaissance": null,
-  "idNationale": null,
-  "createdAt": "2026-02-25T14:50:52.879Z",
-  "updatedAt": "2026-02-25T14:52:18.831Z"
-}
+[{"id":17,"compte":"MW-REVENUS-GLOBAL","typeOperation":"depot","devise":"FC","montant":"2000","dateOperation":"2026-02-28T00:00:00.000Z","description":"Frais d'adhésion membre MW-PRI-HJMK5J (via PRINCIPAL)","createdAt":"2026-02-28T13:41:24.831Z"},{"id":19,"compte":"MW-REVENUS-GLOBAL","typeOperation":"depot","devise":"FC","montant":"2000","dateOperation":"2026-02-28T00:00:00.000Z","description":"Frais d'adhésion membre MW-KEL-VNXJ3S (via KELASI)","createdAt":"2026-02-28T13:41:46.584Z"}]

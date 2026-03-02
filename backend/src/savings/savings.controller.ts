@@ -16,18 +16,40 @@ export class SavingsController {
   constructor(private readonly savingsService: SavingsService) {}
 
   @Get()
-  async findAll(@Query('type') type?: TypeOperation) {
-    return this.savingsService.findAll(type);
+  async findAll(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('type') type?: TypeOperation,
+  ) {
+    return this.savingsService.findAll({
+      page: page ? parseInt(page) : 1,
+      pageSize: pageSize ? parseInt(pageSize) : 10,
+      type,
+    });
   }
 
   @Get('depots')
-  async getDepots() {
-    return this.savingsService.findAll(TypeOperation.DEPOT);
+  async getDepots(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.savingsService.findAll({
+      page: page ? parseInt(page) : 1,
+      pageSize: pageSize ? parseInt(pageSize) : 10,
+      type: TypeOperation.DEPOT,
+    });
   }
 
   @Get('retraits')
-  async getRetraits() {
-    return this.savingsService.findAll(TypeOperation.RETRAIT);
+  async getRetraits(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.savingsService.findAll({
+      page: page ? parseInt(page) : 1,
+      pageSize: pageSize ? parseInt(pageSize) : 10,
+      type: TypeOperation.RETRAIT,
+    });
   }
 
   @Get('compte/:compte')

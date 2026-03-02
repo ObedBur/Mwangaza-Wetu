@@ -1,0 +1,191 @@
+### Configuration
+@baseUrl = http://localhost:3000
+@controller = api/withdrawals
+
+# ==========================================
+# 1. VÉRIFICATION DES LIMITES ET PARAMÈTRES
+# ==========================================
+
+### 🔍 1.1 Vérifier les limites avant un retrait (FC)
+# Valide: horaires, montants min/max, solde disponible
+POST {{baseUrl}}/{{controller}}/verify-limites
+Content-Type: application/json
+
+{
+  "compte": "MW-PRI-G951F8",
+  "montant": 25000,
+  "devise": "FC"
+}
+
+###
+
+### 🔍 1.2 Vérifier les limites avant un retrait (USD)
+POST {{baseUrl}}/{{controller}}/verify-limites
+Content-Type: application/json
+
+{
+  "compte": "MW-PRI-G951F8",
+  "montant": 50,
+  "devise": "USD"
+}
+
+###
+
+# ==========================================
+# 2. CRÉATION DE RETRAITS
+# ==========================================
+
+### 🔴 2.1 Créer un Retrait (FC)
+# Prérequis: Le compte MW-PRI-G951F8 doit avoir un solde suffisant en FC
+POST {{baseUrl}}/{{controller}}
+Content-Type: application/json
+vfvf
+{
+  "compte": "MW-PRI-G951F8",
+  "devise": "FC",
+  "montant": 25000,
+  "dateOperation": "2026-03-01",
+  "description": "Retrait pour frais scolaires"
+}
+
+###
+
+### 🔴 2.2 Créer un Retrait (USD)
+# Prérequis: Le compte doit avoir un solde en USD
+POST {{baseUrl}}/{{controller}}
+Content-Type: application/json
+
+{
+  "compte": "MW-PRI-G951F8",
+  "devise": "USD",
+  "montant": 50,
+  "dateOperation": "2026-03-01",
+  "description": "Retrait en devise étrangère"
+}
+
+###
+
+### 🔴 2.3 Créer un Retrait (Montant minimal FC)
+POST {{baseUrl}}/{{controller}}
+Content-Type: application/json
+
+{
+  "compte": "MW-PRI-G951F8",
+  "devise": "FC",
+  "montant": 5000,
+  "dateOperation": "2026-03-01",
+  "description": "Petit retrait FC"
+}
+
+###
+
+### 🔴 2.4 Créer un Retrait (Montant minimal USD)
+POST {{baseUrl}}/{{controller}}
+Content-Type: application/json
+
+{
+  "compte": "MW-PRI-G951F8",
+  "devise": "USD",
+  "montant": 10,
+  "dateOperation": "2026-03-01",
+  "description": "Petit retrait USD"
+}
+
+###
+
+# ==========================================
+# 3. CONSULTATION ET HISTORIQUE
+# ==========================================
+
+### 📋 3.1 Lister tous les retraits effectués
+GET {{baseUrl}}/{{controller}}
+Content-Type: application/json
+
+###
+
+### 📜 3.2 Historique des retraits d'un compte spécifique
+# Remplacez "MW-PRI-G951F8" par un vrai numéro de compte
+GET {{baseUrl}}/{{controller}}/compte/MW-PRI-G951F8
+Content-Type: application/json
+
+###
+
+### 📜 3.3 Historique d'un autre compte
+GET {{baseUrl}}/{{controller}}/compte/MW-PRI-ABC123
+Content-Type: application/json
+
+###
+
+# ==========================================
+# 4. TESTS D'ERREUR ET CAS LIMITES
+# ==========================================
+
+### ❌ 4.1 Retrait avec montant trop bas (FC)
+# Erreur attendue: montant minimum non atteint
+POST {{baseUrl}}/{{controller}}
+Content-Type: application/json
+
+{
+  "compte": "MW-PRI-G951F8",
+  "devise": "FC",
+  "montant": 100,
+  "dateOperation": "2026-03-01",
+  "description": "Montant trop bas - doit échouer"
+}
+
+###
+
+### ❌ 4.2 Retrait avec montant trop élevé
+# Erreur attendue: montant maximum dépassé
+POST {{baseUrl}}/{{controller}}
+Content-Type: application/json
+
+{
+  "compte": "MW-PRI-G951F8",
+  "devise": "FC",
+  "montant": 10000000,
+  "dateOperation": "2026-03-01",
+  "description": "Montant trop élevé - doit échouer"
+}
+
+###
+
+### ❌ 4.3 Retrait d'un compte inexistant
+POST {{baseUrl}}/{{controller}}
+Content-Type: application/json
+
+{
+  "compte": "MW-PRI-INVALID",
+  "devise": "FC",
+  "montant": 50000,
+  "dateOperation": "2026-03-01",
+  "description": "Compte inexistant"
+}
+
+###
+
+### ❌ 4.4 Vérification avec montant négatif
+POST {{baseUrl}}/{{controller}}/verify-limites
+Content-Type: application/json
+
+{
+  "compte": "MW-PRI-G951F8",
+  "montant": -10000,
+  "devise": "FC"
+}
+
+###
+
+# ==========================================
+# NOTES IMPORTANTES
+# ==========================================
+# - Les retraits incluent automatiquement le calcul des frais selon les paliers:
+#   * Montant ≤ 50 USD (≤ 110,865 FC): 3% de frais
+#   * Montant ≤ 200 USD (≤ 443,460 FC): 2.5% de frais
+#   * Montant > 200 USD (> 443,460 FC): 1.5% de frais
+#
+# - Les horaires des retraits sont contrôlés (début et fin configurables)
+#
+# - Chaque retrait crée une opération de type RETRAIT dans l'épargne
+#
+# - Un solde minimum doit être maintenu après le retrait

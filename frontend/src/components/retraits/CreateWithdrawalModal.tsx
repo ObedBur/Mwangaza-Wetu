@@ -1,69 +1,160 @@
 "use client";
 
+import { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Fingerprint, X, Loader2 } from "lucide-react";
+import { X, Loader2, Search, User, CheckCircle } from "lucide-react";
+import { FormField } from "@/components/ui/FormField";
 import { withdrawalSchema, WithdrawalInput } from "@/lib/validations";
+import { CURRENCIES } from "@/lib/constants";
+import { useZkTeco } from "@/hooks/useZkTeco";
+import { BiometricScanner } from "@/components/biometric";
+import { useMemberByZkId, useMemberSearch } from "@/hooks/useMembers";
+import { MemberRecord } from "@/types";
 
 interface CreateWithdrawalModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: WithdrawalInput) => void | Promise<void>;
-  isLoading?: boolean;
 }
 
 export default function CreateWithdrawalModal({
   isOpen,
   onClose,
   onSubmit,
-  isLoading = false,
 }: CreateWithdrawalModalProps) {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [identifiedPerson, setIdentifiedPerson] = useState<{ name: string; role: 'Membre' | 'Délégué' } | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<WithdrawalInput>({
     resolver: zodResolver(withdrawalSchema),
     defaultValues: {
-      numeroCompte: "MW-98231-A",
+      numeroCompte: "",
       devise: "FC",
       date: new Date(),
       montant: 0,
-      motif: "",
+      description: "",
       biometricValidated: false,
-      adminPassword: "",
     },
   });
 
-  const biometricValidated = watch("biometricValidated");
+  const devise = watch("devise");
+  const numeroCompte = watch("numeroCompte");
+
+  // ─── Recherche de membre par query (Autocomplete) ─────────────────────
+  const { data: searchResults, isFetching: isSearching } = useMemberSearch(
+    numeroCompte,
+    { enabled: showSuggestions }
+  );
+
+  // ─── Biométrie ZKTeco ──────────────────────────────────────────────────
+  const {
+    isScanning: isBiometricPending,
+    scanStatus: biometricStatus,
+    scanError: biometricError,
+    userId: biometricUserId,
+    scanFingerprint: triggerScan,
+    reset: resetBiometric,
+  } = useZkTeco();
+
+  // ─── Récupération automatique par ZK ID ───────────────────────────────
+  const { data: memberByZk, isFetching: isFetchingByZk } = useMemberByZkId(
+    biometricUserId,
+    { enabled: biometricStatus === "success" }
+  );
+
+  // Automatisation : dès que le membre est trouvé par ZK ID, on remplit le compte et on identifie le porteur
+  useEffect(() => {
+    if (memberByZk && biometricUserId) {
+      if (memberByZk.numeroCompte) {
+        setValue("numeroCompte", memberByZk.numeroCompte, { shouldValidate: true });
+      }
+
+      // Identifier si c'est le membre ou l'un de ses délégués
+      if (String(memberByZk.userId) === String(biometricUserId)) {
+        setIdentifiedPerson({ name: memberByZk.nomComplet, role: 'Membre' });
+      } else if (memberByZk.delegues && memberByZk.delegues.length > 0) {
+        const matchingDelegue = memberByZk.delegues.find(d => String(d.userId) === String(biometricUserId));
+        if (matchingDelegue) {
+          setIdentifiedPerson({ name: matchingDelegue.nom, role: 'Délégué' });
+        }
+      }
+    } else if (!biometricUserId) {
+      setIdentifiedPerson(null);
+    }
+  }, [memberByZk, biometricUserId, setValue]);
+
+  // Synchroniser l'état validé du formulaire avec le résultat du scan
+  useEffect(() => {
+    setValue("biometricValidated", biometricStatus === "success", {
+      shouldValidate: biometricStatus === "success",
+    });
+  }, [biometricStatus, setValue]);
+
+  // Fermer le dropdown au clic extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Réinitialiser le formulaire à la fermeture
+  useEffect(() => {
+    if (!isOpen) {
+      reset({
+        numeroCompte: "",
+        devise: "FC",
+        date: new Date(),
+        montant: 0,
+        description: "",
+        biometricValidated: false,
+      });
+      resetBiometric();
+      setShowSuggestions(false);
+    }
+  }, [isOpen, reset, resetBiometric]);
+
+  const handleSelectMember = (member: MemberRecord) => {
+    setValue("numeroCompte", member.numeroCompte, { shouldValidate: true });
+    setShowSuggestions(false);
+  };
 
   if (!isOpen) return null;
-
-  const canSubmit = !isLoading && !isSubmitting;
 
   return (
     <>
       <div
-        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm"
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50"
         onClick={onClose}
       />
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-        <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
-          <div className="px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-primary text-white">
-            <div className="flex items-center gap-2">
-              <span className="font-bold">+</span>
-              <h3 className="text-base sm:text-lg font-bold">
-                Nouveau Retrait Sécurisé
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 text-slate-900">
+        <div className="w-full max-w-lg bg-white dark:bg-slate-900 shadow-2xl rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="p-4 sm:p-6 bg-red-600/5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <h3 className="text-lg sm:text-xl font-bold text-red-600 dark:text-red-500">
+                Nouveau Retrait
               </h3>
+              <p className="text-[11px] sm:text-xs text-slate-500">
+                Saisissez les informations du retrait
+              </p>
             </div>
             <button
               type="button"
               onClick={onClose}
-              disabled={isLoading}
-              className="text-white/80 hover:text-white transition-colors disabled:opacity-50"
+              className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -72,213 +163,190 @@ export default function CreateWithdrawalModal({
 
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="p-4 sm:p-6 space-y-5"
           >
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() =>
-                    setValue("biometricValidated", !biometricValidated, {
-                      shouldValidate: true,
-                    })
-                  }
-                  className={
-                    biometricValidated
-                      ? "w-full p-6 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-200 dark:border-emerald-900/40 flex flex-col items-center justify-center text-center space-y-3"
-                      : "w-full p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center space-y-3 hover:border-primary/40 transition-all"
-                  }
-                >
-                  <div className="relative">
-                    <Fingerprint
-                      className={
-                        biometricValidated
-                          ? "w-12 h-12 text-emerald-500"
-                          : "w-12 h-12 text-primary animate-pulse"
-                      }
-                    />
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">
-                      Zone Biométrique
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {biometricValidated
-                        ? "Biométrie validée (mock)"
-                        : "En attente du scan du membre..."}
-                    </p>
-                  </div>
-                  <span className="text-[10px] uppercase tracking-widest font-bold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 bg-emerald-500/10 rounded">
-                    Lecteur Prêt
+            {/* Champ Numéro de Compte avec Autocomplete */}
+            <div className="space-y-2 relative" ref={dropdownRef}>
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                Numéro de Compte
+                {isFetchingByZk && (
+                  <span className="flex items-center gap-1 text-[10px] text-red-600 italic animate-pulse">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />{" "}
+                    Identification...
                   </span>
-                </button>
-                {errors.biometricValidated && (
-                  <p className="text-red-500 text-xs text-center">
-                    {errors.biometricValidated.message}
-                  </p>
                 )}
-              </div>
+              </label>
 
-              <div className="p-5 bg-primary/5 rounded-2xl border border-primary/10">
-                <h4 className="text-xs font-bold text-primary uppercase tracking-widest mb-3">
-                  État du Compte
-                </h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-500">Solde Actuel</span>
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">
-                      8.450.000 FC
-                    </span>
+              {/* Affichage de la personne identifiée par biométrie */}
+              {identifiedPerson && (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-xl p-3 flex items-center gap-3 animate-in fade-in slide-in-from-top-1 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-800/40 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
+                    <CheckCircle className="w-5 h-5" />
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-500">
-                      Maximum Retirable
-                    </span>
-                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                      7.200.000 FC
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                    <div className="bg-primary h-full w-[85%]" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-green-600 dark:text-green-400 font-bold uppercase tracking-wider">
+                      Scanné par :{" "}
+                      <span className="underline">{identifiedPerson.role}</span>
+                    </p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      {identifiedPerson.name}
+                    </p>
                   </div>
                 </div>
+              )}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="MW-PRI-A8K2Z9 ou Nom..."
+                  autoComplete="off"
+                  {...register("numeroCompte")}
+                  onFocus={() => setShowSuggestions(true)}
+                  className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl focus:ring-2 transition-all font-semibold ${
+                    errors.numeroCompte
+                      ? "border-red-500 focus:ring-red-500/20 text-red-900"
+                      : "border-slate-200 dark:border-slate-700 focus:ring-primary/20"
+                  }`}
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  {isSearching && (
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                  )}
+                  <Search className="w-4 h-4 text-slate-300" />
+                </div>
               </div>
+
+              {/* Liste de suggestions */}
+              {showSuggestions && searchResults && searchResults.length > 0 && (
+                <div className="absolute z-60 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                  {searchResults.map((member) => (
+                    <button
+                      key={member.id}
+                      type="button"
+                      onClick={() => handleSelectMember(member)}
+                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b last:border-0 border-slate-50 dark:border-slate-700"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[150px]">
+                            {member.nomComplet}
+                          </p>
+                          <p className="text-[10px] font-mono text-slate-500">
+                            {member.numeroCompte}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[9px] font-bold text-primary uppercase bg-primary/5 px-2 py-0.5 rounded-full">
+                          {member.typeCompte}
+                        </span>
+                        {member.statut === "actif" && (
+                          <div className="flex items-center gap-1 text-[8px] text-green-600 mt-1">
+                            <CheckCircle className="w-2.5 h-2.5" /> Actif
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {errors.numeroCompte && (
+                <p className="text-red-500 text-xs mt-1 font-medium italic">
+                  {errors.numeroCompte.message}
+                </p>
+              )}
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Numéro de Compte
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                  Devise
                 </label>
-                <input
-                  disabled={isLoading}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50"
-                  type="text"
-                  {...register("numeroCompte")}
-                />
-                {errors.numeroCompte && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.numeroCompte.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Devise
-                  </label>
-                  <select
-                    disabled={isLoading}
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                    {...register("devise")}
-                  >
-                    <option value="FC">Francs (FC)</option>
-                  </select>
-                  {errors.devise && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.devise.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Date
-                  </label>
-                  <input
-                    disabled={isLoading}
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                    type="date"
-                    {...register("date", { valueAsDate: true })}
-                  />
-                  {errors.date && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.date.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Montant du Retrait
-                </label>
-                <input
-                  disabled={isLoading}
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-lg font-bold text-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                  placeholder="0.00"
-                  type="number"
-                  {...register("montant", { valueAsNumber: true })}
-                />
-                {errors.montant && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.montant.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Motif de retrait
-                </label>
-                <textarea
-                  disabled={isLoading}
-                  className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-                  placeholder="Ex: Frais de santé..."
-                  rows={2}
-                  {...register("motif")}
-                />
-                {errors.motif && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.motif.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 mt-2">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  Validation Administrateur
-                </label>
-                <input
-                  disabled={isLoading}
-                  className="w-full px-4 py-2.5 bg-emerald-500/5 border border-emerald-500/20 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all disabled:opacity-50"
-                  placeholder="Mot de passe superviseur"
-                  type="password"
-                  {...register("adminPassword")}
-                />
-                {errors.adminPassword && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.adminPassword.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  disabled={isLoading}
-                  className="px-5 py-2.5 rounded-xl text-slate-500 font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
+                <select
+                  className={`w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border rounded-xl focus:ring-2 transition-all appearance-none font-semibold ${
+                    errors.devise
+                      ? "border-red-500 focus:ring-red-500/20 text-red-900"
+                      : "border-slate-200 dark:border-slate-700 focus:ring-primary/20"
+                  }`}
+                  {...register("devise")}
                 >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={!canSubmit}
-                  className="px-8 py-2.5 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/30 hover:bg-blue-700 disabled:opacity-60 disabled:hover:bg-primary transition-all flex items-center gap-2"
-                >
-                  {isLoading || isSubmitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Traitement...
-                    </>
-                  ) : (
-                    "Valider la Transaction"
-                  )}
-                </button>
+                  {CURRENCIES.map((currency) => (
+                    <option key={currency.value} value={currency.value}>
+                      {currency.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.devise && (
+                  <p className="text-red-500 text-xs mt-1 font-medium">
+                    {errors.devise.message}
+                  </p>
+                )}
               </div>
+
+              <FormField
+                label="Date"
+                type="date"
+                {...register("date", { valueAsDate: true })}
+                error={errors.date}
+              />
+            </div>
+
+            <FormField
+              label="Montant du Retrait"
+              type="number"
+              placeholder="0.00"
+              icon={<span className="font-bold">{devise}</span>}
+              {...register("montant", { valueAsNumber: true })}
+              error={errors.montant}
+              className="text-lg sm:text-xl font-bold"
+            />
+
+            <FormField
+              label="Motif du Retrait"
+              type="text"
+              placeholder="Ex: Frais de santé, dépenses..."
+              {...register("description")}
+              error={errors.description}
+            />
+
+            {/* Scanner biométrique partagé */}
+            <div className="space-y-1">
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                Validation Biométrique
+              </label>
+              <BiometricScanner
+                label="Retrait"
+                status={biometricStatus}
+                error={biometricError}
+                userId={biometricUserId}
+                scanning={isBiometricPending}
+                onScan={triggerScan}
+              />
+              {errors.biometricValidated && (
+                <p className="text-red-500 text-xs mt-1 text-center font-medium">
+                  {errors.biometricValidated.message}
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="py-3 px-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-60 disabled:hover:bg-red-600 text-white font-bold text-sm shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 transition-all active:scale-95"
+              >
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSubmitting ? "Traitement..." : "Effectuer le retrait"}
+              </button>
             </div>
           </form>
         </div>
@@ -286,3 +354,4 @@ export default function CreateWithdrawalModal({
     </>
   );
 }
+

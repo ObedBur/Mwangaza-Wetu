@@ -251,14 +251,12 @@ export default function CreateMemberModal({
                             shouldValidate: true,
                           })
                         }
-                        className={`p-2 sm:p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 ${typeCompte === type.value
-                          ? "border-primary bg-primary/5 text-primary"
-                          : "border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:border-slate-200 dark:hover:border-slate-600"
-                          }`}
+                        className={`p-2 sm:p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 ${
+                          typeCompte === type.value
+                            ? "border-primary bg-primary/5 text-primary"
+                            : "border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:border-slate-200 dark:hover:border-slate-600"
+                        }`}
                       >
-                        <span className="text-[10px] font-black leading-none">
-                          MW-{type.prefix}
-                        </span>
                         <span className="text-[10px] sm:text-xs font-bold uppercase truncate">
                           {type.label}
                         </span>
@@ -288,7 +286,8 @@ export default function CreateMemberModal({
                     )}
                   </div>
                   <p className="text-[10px] text-slate-500 italic">
-                    Ce numéro est généré automatiquement avec un code de section et un identifiant aléatoire.
+                    Ce numéro est généré automatiquement avec un code de section
+                    et un identifiant aléatoire.
                   </p>
                 </div>
               </div>
@@ -433,7 +432,9 @@ export default function CreateMemberModal({
                   className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
                   onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
                 >
-                  {showAdvancedOptions ? "- Moins d'options" : "+ Plus d'options (Naissance, Password)"}
+                  {showAdvancedOptions
+                    ? "- Moins d'options"
+                    : "+ Plus d'options (Naissance, Password)"}
                 </button>
               </div>
 
@@ -491,12 +492,17 @@ export default function CreateMemberModal({
                 <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 rounded-xl p-4 flex flex-col justify-center">
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign className="w-4 h-4 text-orange-600" />
-                    <span className="text-xs font-bold text-orange-800 dark:text-orange-300 uppercase">Frais d'Adhésion</span>
+                    <span className="text-xs font-bold text-orange-800 dark:text-orange-300 uppercase">
+                      Frais d'Adhésion
+                    </span>
                   </div>
                   <p className="text-[10px] text-orange-700 dark:text-orange-400 mb-3 leading-tight">
-                    Une cotisation de 2 000 FC sera déduite pour le compte collectif.
+                    Une cotisation de 2 000 FC sera déduite pour le compte
+                    collectif.
                   </p>
-                  <div className="text-2xl font-black text-orange-600">2 000 FC</div>
+                  <div className="text-2xl font-black text-orange-600">
+                    2 000 FC
+                  </div>
                 </div>
               </div>
             </div>
@@ -519,7 +525,9 @@ export default function CreateMemberModal({
                   className="w-full py-4 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col items-center gap-2 text-slate-400 hover:text-primary hover:border-primary/50 hover:bg-primary/5 transition-all group"
                 >
                   <UserPlus className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-bold uppercase tracking-wider">Ajouter un délégué autorisé</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">
+                    Ajouter un délégué autorisé
+                  </span>
                 </button>
               ) : (
                 <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
@@ -535,102 +543,102 @@ export default function CreateMemberModal({
                       <div className="space-y-4">
                         <div className="space-y-1">
                           <label className="text-xs font-semibold text-slate-600">
-                              Nom du délégué *
-                            </label>
-                            <input
-                              type="text"
-                              {...register("delegue.nom")}
-                              placeholder="Nom Complet"
-                              className={`w-full bg-white dark:bg-slate-700 border rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all ${errors.delegue?.nom ? "border-red-500" : "border-slate-200 dark:border-slate-600"}`}
-                            />
-                            {errors.delegue?.nom && (
-                              <p className="text-red-500 text-[10px] mt-1">
-                                {errors.delegue.nom.message}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-600">
-                              Relation *
-                            </label>
-                            <select
-                              {...register("delegue.relation")}
-                              className={`w-full bg-white dark:bg-slate-700 border rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all ${errors.delegue?.relation ? "border-red-500" : "border-slate-200 dark:border-slate-600"}`}
-                            >
-                              <option value="">Sélectionner</option>
-                              <option value="Conjoint(e)">Conjoint(e)</option>
-                              <option value="Enfant">Enfant</option>
-                              <option value="Frère/Sœur">Frère/Sœur</option>
-                              <option value="Parent">Parent</option>
-                              <option value="Cousin(e)">Cousin(e)</option>
-                              <option value="Autre">Autre</option>
-                            </select>
-                            {errors.delegue?.relation && (
-                              <p className="text-red-500 text-[10px] mt-1">
-                                {errors.delegue.relation.message}
-                              </p>
-                            )}
-                          </div>
+                            Nom du délégué *
+                          </label>
+                          <input
+                            type="text"
+                            {...register("delegue.nom")}
+                            placeholder="Nom Complet"
+                            className={`w-full bg-white dark:bg-slate-700 border rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all ${errors.delegue?.nom ? "border-red-500" : "border-slate-200 dark:border-slate-600"}`}
+                          />
+                          {errors.delegue?.nom && (
+                            <p className="text-red-500 text-[10px] mt-1">
+                              {errors.delegue.nom.message}
+                            </p>
+                          )}
                         </div>
 
-                        <div className="space-y-4">
-                          <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-600">
-                              Téléphone
-                            </label>
-                            <input
-                              type="text"
-                              {...register("delegue.telephone")}
-                              placeholder="0812345678"
-                              className={`w-full bg-white dark:bg-slate-700 border rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all ${errors.delegue?.telephone ? "border-red-500" : "border-slate-200 dark:border-slate-600"}`}
-                            />
-                            {errors.delegue?.telephone && (
-                              <p className="text-red-500 text-[10px] mt-1">
-                                {errors.delegue.telephone.message}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <label className="text-xs font-semibold text-slate-600">
-                              Pièce ID
-                            </label>
-                            <input
-                              type="text"
-                              {...register("delegue.pieceIdentite")}
-                              placeholder="N° Carte / Passport"
-                              className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
-                            />
-                          </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">
+                            Relation *
+                          </label>
+                          <select
+                            {...register("delegue.relation")}
+                            className={`w-full bg-white dark:bg-slate-700 border rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all ${errors.delegue?.relation ? "border-red-500" : "border-slate-200 dark:border-slate-600"}`}
+                          >
+                            <option value="">Sélectionner</option>
+                            <option value="Conjoint(e)">Conjoint(e)</option>
+                            <option value="Enfant">Enfant</option>
+                            <option value="Frère/Sœur">Frère/Sœur</option>
+                            <option value="Parent">Parent</option>
+                            <option value="Cousin(e)">Cousin(e)</option>
+                            <option value="Autre">Autre</option>
+                          </select>
+                          {errors.delegue?.relation && (
+                            <p className="text-red-500 text-[10px] mt-1">
+                              {errors.delegue.relation.message}
+                            </p>
+                          )}
                         </div>
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <BiometricScanner
-                        status={delegueZk.scanStatus}
-                        error={delegueZk.scanError}
-                        userId={delegueZk.userId}
-                        scanning={delegueZk.isScanning}
-                        onScan={delegueZk.scanFingerprint}
-                        label="Délégué"
-                      />
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">
+                            Téléphone
+                          </label>
+                          <input
+                            type="text"
+                            {...register("delegue.telephone")}
+                            placeholder="0812345678"
+                            className={`w-full bg-white dark:bg-slate-700 border rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all ${errors.delegue?.telephone ? "border-red-500" : "border-slate-200 dark:border-slate-600"}`}
+                          />
+                          {errors.delegue?.telephone && (
+                            <p className="text-red-500 text-[10px] mt-1">
+                              {errors.delegue.telephone.message}
+                            </p>
+                          )}
+                        </div>
 
-                      <div className="flex items-center justify-center p-4">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowDelegue(false);
-                            setDeleguePhoto("");
-                          }}
-                          className="text-[10px] font-black uppercase text-red-500 hover:text-red-600 tracking-widest flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3 h-3" /> Annuler le délégué
-                        </button>
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-slate-600">
+                            Pièce ID
+                          </label>
+                          <input
+                            type="text"
+                            {...register("delegue.pieceIdentite")}
+                            placeholder="N° Carte / Passport"
+                            className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <BiometricScanner
+                      status={delegueZk.scanStatus}
+                      error={delegueZk.scanError}
+                      userId={delegueZk.userId}
+                      scanning={delegueZk.isScanning}
+                      onScan={delegueZk.scanFingerprint}
+                      label="Délégué"
+                    />
+
+                    <div className="flex items-center justify-center p-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDelegue(false);
+                          setDeleguePhoto("");
+                        }}
+                        className="text-[10px] font-black uppercase text-red-500 hover:text-red-600 tracking-widest flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" /> Annuler le délégué
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </form>

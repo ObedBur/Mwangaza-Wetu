@@ -228,18 +228,12 @@ export const useMemberByZkId = (zkId: string | null, options?: { enabled?: boole
   });
 };
 
-/**
- * Hook pour la recherche intuitive (Autocomplete)
- * Recherche par nom ou numéro de compte.
- */
 export const useMemberSearch = (query: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ['memberSearch', query],
     queryFn: async () => {
       if (!query || query.length < 2) return [];
       try {
-        // On utilise l'endpoint principal /membres qui accepte déjà le paramètre 'search'
-        // et on extrait la liste des membres du champ 'data' de la réponse paginée.
         const { data } = await apiClient.get<PaginatedResponse<MemberRecord>>(API_ROUTES.MEMBRES, {
           params: { search: query, pageSize: 20 }
         });
@@ -251,5 +245,88 @@ export const useMemberSearch = (query: string, options?: { enabled?: boolean }) 
     },
     enabled: (options?.enabled ?? true) && !!query && query.length >= 2,
     staleTime: 30000,
+  });
+};
+
+/**
+ * Hook pour modifier les informations d'un membre
+ */
+export const useUpdateMember = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<MemberInput> }) => {
+      const response = await apiClient.put<MemberRecord>(`${API_ROUTES.MEMBRES}/${id}`, data);
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['members'] });
+      queryClient.invalidateQueries({ queryKey: ['memberById', variables.id] });
+    },
+  });
+};
+
+/**
+ * Hook pour supprimer/désactiver un membre
+ */
+export const useDeleteMember = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await apiClient.delete(`${API_ROUTES.MEMBRES}/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] });
+    },
+  });
+};
+
+/**
+ * Hook pour récupérer un membre par son ID unique
+ */
+export const useMemberById = (id: number | null, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['memberById', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data } = await apiClient.get<MemberRecord>(`${API_ROUTES.MEMBRES}/${id}`);
+      return data;
+    },
+    enabled: !!id && (options?.enabled ?? true),
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+/**
+ * Hook pour récupérer la liste simplifiée des numéros de compte
+ */
+export const useNumeros = () => {
+  return useQuery({
+    queryKey: ['memberNumeros'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ id: number; numero_compte: string; nom_complet: string }[]>(API_ROUTES.MEMBRES_NUMEROS);
+      return data;
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+};
+
+/**
+ * Hook pour vérifier si un ID Biométrique est déjà pris
+ */
+export const useCheckUserId = (userId: string, excludeId?: number, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['checkUserId', userId, excludeId],
+    queryFn: async () => {
+      if (!userId) return { exists: false };
+      const { data } = await apiClient.get<{ exists: boolean; where?: string }>(`${API_ROUTES.MEMBRES}/check-userid/${userId}`, {
+        params: excludeId ? { exclude: excludeId } : undefined
+      });
+      return data;
+    },
+    enabled: !!userId && (options?.enabled ?? true),
+    staleTime: 0,
   });
 };

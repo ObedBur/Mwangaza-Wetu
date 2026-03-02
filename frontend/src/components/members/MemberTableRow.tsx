@@ -12,6 +12,8 @@ import {
 
 import { MemberRecord } from "@/types";
 import { ACCOUNT_TYPES } from "@/lib/constants";
+import { useUpdateMember } from "@/hooks/useMembers";
+import { useToast } from "@/hooks/use-toast";
 
 interface MemberTableRowProps {
   member: MemberRecord;
@@ -25,6 +27,23 @@ export default function MemberTableRow({
   const [imageError, setImageError] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { mutateAsync: updateMember, isPending: isUpdating } =
+    useUpdateMember();
+  const { success: toastSuccess, error: toastError } = useToast();
+
+  const handleStatusChange = async () => {
+    try {
+      const newStatut = member.statut === "actif" ? "inactif" : "actif";
+      await updateMember({ id: member.id, data: { statut: newStatut } });
+      toastSuccess(
+        "Statut modifié",
+        `Le compte a été ${newStatut === "actif" ? "activé" : "désactivé"} avec succès.`,
+      );
+      setShowMenu(false);
+    } catch (err) {
+      toastError("Erreur", "Impossible de modifier le statut du compte.");
+    }
+  };
 
   const statusColors: Record<string, string> = {
     actif: "bg-green-100 text-green-700",
@@ -109,7 +128,7 @@ export default function MemberTableRow({
             const type = ACCOUNT_TYPES.find(
               (t) => t.value === member.typeCompte,
             );
-            return type ? `${type.prefix} - ${type.label}` : member.typeCompte;
+            return type ? type.label : member.typeCompte;
           })()}
         </span>
       </td>
@@ -136,21 +155,31 @@ export default function MemberTableRow({
             <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white dark:bg-slate-900 shadow-xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
               {/* Entête Menu */}
               <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Compte: {member.numeroCompte}</p>
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{member.nomComplet}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Compte: {member.numeroCompte}
+                </p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
+                  {member.nomComplet}
+                </p>
               </div>
 
               <div className="p-1.5 space-y-0.5">
                 {/* Profil & Edition */}
                 <button
-                  onClick={() => { onActionClick(member.id); setShowMenu(false); }}
+                  onClick={() => {
+                    onActionClick(member.id);
+                    setShowMenu(false);
+                  }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group"
                 >
                   <Eye className="w-4 h-4 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors" />
                   Voir le Profil
                 </button>
                 <button
-                  onClick={() => { console.log("Edit", member.id); setShowMenu(false); }}
+                  onClick={() => {
+                    console.log("Edit", member.id);
+                    setShowMenu(false);
+                  }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors group"
                 >
                   <Edit className="w-4 h-4 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors" />
@@ -160,18 +189,19 @@ export default function MemberTableRow({
                 <div className="my-1.5 border-t border-slate-100 dark:border-slate-800" />
 
                 <button
-                  onClick={() => { console.log("Status change", member.id); setShowMenu(false); }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors group ${member.statut === 'actif' ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}
+                  onClick={handleStatusChange}
+                  disabled={isUpdating}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg transition-colors group ${member.statut === "actif" ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"} disabled:opacity-50`}
                 >
-                  {member.statut === 'actif' ? (
+                  {member.statut === "actif" ? (
                     <>
                       <UserMinus className="w-4 h-4 text-red-400 group-hover:text-red-600" />
-                      Désactiver le compte
+                      {isUpdating ? "Désactivation..." : "Désactiver le compte"}
                     </>
                   ) : (
                     <>
                       <UserCheck className="w-4 h-4 text-green-400 group-hover:text-green-600" />
-                      Activer le compte
+                      {isUpdating ? "Activation..." : "Activer le compte"}
                     </>
                   )}
                 </button>

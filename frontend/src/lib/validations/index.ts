@@ -59,14 +59,12 @@ export const savingsSchema = transactionSchema.extend({
 });
 
 /**
- * WithdrawalSchema (Retrait) : Étend TransactionSchema
+ * WithdrawalSchema (Retrait) : Étend TransactionSchema - Identique à SavingsSchema pour cohérence UI
  */
 export const withdrawalSchema = transactionSchema.extend({
   numeroCompte: z.string().min(1, "Le numéro de compte est requis"),
   devise: z.enum(["USD", "FC"]).default("FC"),
-  motif: z.string().min(1, "Le motif est requis"),
-  biometricValidated: z.boolean().refine(val => val === true, "La validation biométrique est requise"),
-  adminPassword: z.string().min(1, "Le mot de passe administrateur est requis"),
+  biometricValidated: z.boolean().default(false),
 });
 
 /**

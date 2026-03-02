@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { DepositTransaction } from "@/types";
+import { ACCOUNT_TYPES } from "@/lib/constants";
 
 export default function DepositTableRow({ tx }: { tx: DepositTransaction }) {
   const [imageError, setImageError] = useState(false);
@@ -33,8 +34,14 @@ export default function DepositTableRow({ tx }: { tx: DepositTransaction }) {
             )}
           </div>
           <div>
-            <div className="font-semibold text-slate-900 dark:text-white">
+            <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
               {tx.membre?.nomComplet || "Membre Inconnu"}
+              {tx.membre?.typeCompte && (
+                <span className="text-[9px] font-bold bg-primary/5 text-primary px-1.5 py-0.5 rounded border border-primary/10">
+                  {ACCOUNT_TYPES.find((t) => t.value === tx.membre?.typeCompte)
+                    ?.label || tx.membre.typeCompte}
+                </span>
+              )}
             </div>
             <div className="text-xs text-slate-500">#{tx.compte}</div>
           </div>
@@ -62,7 +69,10 @@ export default function DepositTableRow({ tx }: { tx: DepositTransaction }) {
           {formatDate(tx.dateOperation)}
         </div>
         <div className="text-[10px] text-slate-400 italic">
-          {new Date(tx.dateOperation).toLocaleTimeString("fr-FR", { hour: '2-digit', minute: '2-digit' })}
+          {new Date(tx.dateOperation).toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </div>
       </td>
 

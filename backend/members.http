@@ -1,0 +1,153 @@
+### Configuration
+@baseUrl = http://localhost:3000
+@controller = api/membres
+
+# ==========================================
+# 1. CRÉATION ET VÉRIFICATION DE DISPONIBILITÉ
+# ==========================================
+
+### � 1.1 Générer un numéro de compte (Simulé)
+# Utile pour savoir quel numéro sera attribué avant de créer
+GET {{baseUrl}}/{{controller}}/generate-numero?section=PRINCIPAL&year=2026
+Content-Type: application/json
+
+###
+
+### 📏 1.2 Obtenir le prochain numéro de séquence
+GET {{baseUrl}}/{{controller}}/last-numero?section=PRINCIPAL&year=2026
+Content-Type: application/json
+
+###
+
+### 👤 1.3 Vérifier si un ID Biométrique est déjà pris
+# Remplacez '123' par un ID à tester
+GET {{baseUrl}}/{{controller}}/check-userid/1
+Content-Type: application/json
+
+###
+
+# ==========================================
+# 2. GESTION DES MEMBRES (CRUD)
+# ==========================================
+
+### 🆕 2.1 Créer un membre complet (avec Délégué)
+# Teste l'adhésion, la création du délégué et les comptes de revenus
+POST {{baseUrl}}/{{controller}}
+Content-Type: application/json
+
+{
+  "nomComplet": "Jean-Luc Mwangaza",
+  "telephone": "0810001111",
+  "email": "jeanluc@mwangaza.cd",
+  "adresse": "Goma, Quartier Himbi",
+  "sexe": "M",
+  "typeCompte": "PRINCIPAL",
+  "statut": "actif",
+  "dateAdhesion": "2026-02-28",
+  "idNationale": "ID-GOMA-999",
+  "userId": "3",
+  "delegue": {
+    "nom": "Marie Mwangaza",
+    "telephone": "0998887776",
+    "relation": "Conjoint(e)",
+    "pieceIdentite": "ID-GOMA-001"
+  }
+}
+
+###
+
+### 🆕 2.2 Créer un membre minimal
+POST {{baseUrl}}/{{controller}}
+Content-Type: application/json
+
+{
+  "nomComplet": "Test Minimal",
+  "telephone": "0820002222",
+  "dateAdhesion": "2026-02-28",
+  "typeCompte": "KELASI",
+  "statut": "actif"
+}
+
+###
+
+### � 2.3 Modifier les informations d'un membre
+# Remplacez '1' par l'ID réel retourné par la création
+PUT {{baseUrl}}/{{controller}}/23
+Content-Type: application/json
+
+{
+  "adresse": "Goma",
+  "statut": "inactif"
+}
+
+###
+
+### 🗑️ 2.4 Supprimer un membre
+# Remplacez '1' par l'ID réel
+DELETE {{baseUrl}}/{{controller}}/23
+Content-Type: application/json
+
+###
+
+# ==========================================
+# 3. RECHERCHE ET CONSULTATION
+# ==========================================
+
+### 📋 3.1 Liste tous les membres (avec pagination)
+GET {{baseUrl}}/{{controller}}?page=1&pageSize=10
+Content-Type: application/json
+
+###
+
+### 📊 3.2 Statistiques globales des membres
+GET {{baseUrl}}/{{controller}}/stats
+Content-Type: application/json
+
+###
+
+### 🔢 3.3 Liste simplifiée (Noms et Comptes)
+GET {{baseUrl}}/{{controller}}/numeros
+Content-Type: application/json
+
+###
+
+### 🔍 3.4 Trouver par ID
+GET {{baseUrl}}/{{controller}}/1
+Content-Type: application/json
+
+###
+
+### � 3.5 Trouver par Numéro de Compte
+# Remplacez par un vrai numéro de compte (ex: MW-PRI-2026-0001)
+GET {{baseUrl}}/{{controller}}/by-numero/MW-PRI-2026-0001
+Content-Type: application/json
+
+###
+
+### 🔍 3.6 Trouver par ID Biométrique (ZK ID)
+GET {{baseUrl}}/{{controller}}/by-zkid/1
+Content-Type: application/json
+
+###
+
+# ==========================================
+# 4. VÉRIFICATION DES REVENUS (SYSTÈME)
+# ==========================================
+
+### 💰 4.1 Solde du compte REVENUS PRINCIPAL
+GET {{baseUrl}}/api/epargnes/soldes/MW-PRI-REVENUS
+
+###
+
+### 📜 4.2 Transactions du compte REVENUS PRINCIPAL
+GET {{baseUrl}}/api/epargnes/compte/MW-PRI-REVENUS
+
+###
+
+### 🌍 4.3 Solde du compte REVENUS GLOBAL
+GET {{baseUrl}}/api/epargnes/soldes/MW-REVENUS-GLOBAL
+
+###
+
+### 📜 4.4 Transactions du compte REVENUS GLOBAL
+GET {{baseUrl}}/api/epargnes/compte/MW-REVENUS-GLOBAL

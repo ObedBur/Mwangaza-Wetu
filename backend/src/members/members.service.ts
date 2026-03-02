@@ -236,6 +236,7 @@ export class MembersService {
       });
 
       if (revType) {
+        // 1. Enregistrement dans la table Revenu (Nouvelle architecture)
         await tx.revenu.create({
           data: {
             typeCompte: typeNormalise,
@@ -246,8 +247,35 @@ export class MembersService {
             sourceCompte: finalNumeroCompte,
           },
         });
-      }
 
+        // 2. Enregistrement sur le compte de REVENUS de la section
+        const sectionTrigram = getSectionTrigram(typeNormalise);
+        const revenueAccount = `MW-${sectionTrigram}-REVENUS`;
+        
+        await tx.epargne.create({
+          data: {
+            compte: revenueAccount,
+            typeOperation: 'depot',
+            devise: Devise.FC,
+            montant: 2000,
+            dateOperation: new Date(dateAdhesion),
+            description: `Frais d'adhésion membre ${finalNumeroCompte}`,
+          },
+        });
+
+        // 3. Enregistrement sur le compte REVENUS GLOBAL
+        await tx.epargne.create({
+          data: {
+            compte: 'MW-REVENUS-GLOBAL',
+            typeOperation: 'depot',
+            devise: Devise.FC,
+            montant: 2000,
+            dateOperation: new Date(dateAdhesion),
+            description: `Frais d'adhésion membre ${finalNumeroCompte} (via ${typeNormalise})`,
+          },
+        });
+      }
+     
       // 2. Gérer le délégué
       if (delegue) {
         const deleguePhotoFileName = this.saveBase64Image(
@@ -453,14 +481,44 @@ export class MembersService {
   }
 
   async remove(id: number) {
-    const membre = await this.prisma.membre.findUnique({ where: { id } });
+    const membre = await this.prisma.membre.findUnique({ 
+      where: { id },
+      include: {
+        epargnes: { take: 1 },
+        retraits: { take: 1 },
+        credits: { take: 1 }
+      }
+    });
+
     if (!membre) throw new NotFoundException('Membre non trouvé');
+
+    // Empêcher la suppression des comptes système
+    if (
+      membre.numeroCompte === 'MW-REVENUS-GLOBAL' || 
+      membre.numeroCompte.includes('SECTION-0000') ||
+      membre.numeroCompte.includes('-REVENUS') || 
+      membre.typeCompte === 'SYSTEME'
+    ) {
+      throw new BadRequestException('Impossible de supprimer un compte système.');
+    }
+
+    // Empêcher la suppression si le membre a des transactions
+    if (
+      membre.epargnes.length > 0 || 
+      membre.retraits.length > 0 || 
+      membre.credits.length > 0
+    ) {
+      throw new BadRequestException('Ce membre a des transactions enregistrées. Veuillez le désactiver plutôt que de le supprimer.');
+    }
 
     // Supprimer la photo
     if (membre.photoProfil) {
       const photoPath = path.join(this.uploadsDir, membre.photoProfil);
       if (fs.existsSync(photoPath)) fs.unlinkSync(photoPath);
     }
+
+    // Supprimer les délégués associés (pris en charge par cascade si configuré, mais on le fait pour être sûr)
+    await this.prisma.delegue.deleteMany({ where: { membreId: id } });
 
     return this.prisma.membre.delete({ where: { id } });
   }

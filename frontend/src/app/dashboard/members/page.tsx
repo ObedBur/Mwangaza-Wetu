@@ -5,12 +5,15 @@ import MembersHeader from "@/components/members/MembersHeader";
 import MembersStatsSection from "@/components/members/MembersStatsSection";
 import MembersTable from "@/components/members/MembersTable";
 import CreateMemberModal from "@/components/members/CreateMemberModal";
+import ViewMemberModal from "@/components/members/ViewMemberModal";
 import { useCreateMember, useMembers } from "@/hooks/useMembers";
 import { MemberInput } from "@/lib/validations";
 import { useToast } from "@/hooks/use-toast";
 
 export default function MembersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewMemberId, setViewMemberId] = useState<number | null>(null);
+  
   const { mutateAsync: createMember } = useCreateMember();
   const { success: toastSuccess, error: toastError } = useToast();
   
@@ -40,7 +43,7 @@ export default function MembersPage() {
   };
 
   const handleMemberAction = (memberId: number) => {
-    console.log("Action  cliqué par le membre:", memberId);
+    setViewMemberId(memberId);
   };
 
   const handleCreateMemberModal = () => {
@@ -49,15 +52,15 @@ export default function MembersPage() {
 
   return (
     <div className="space-y-6">
-      <MembersHeader 
-        onCreateClick={handleCreateMemberModal} 
+      <MembersHeader
+        onCreateClick={handleCreateMemberModal}
         members={allMembers}
       />
 
       <div className="grid gap-6">
         <MembersStatsSection />
-        <MembersTable 
-          onActionClick={handleMemberAction} 
+        <MembersTable
+          onActionClick={handleMemberAction}
           onCreateMember={handleCreateMemberModal}
         />
       </div>
@@ -66,6 +69,12 @@ export default function MembersPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateMemberSubmit}
+      />
+
+      <ViewMemberModal
+        isOpen={viewMemberId !== null}
+        memberId={viewMemberId}
+        onClose={() => setViewMemberId(null)}
       />
     </div>
   );

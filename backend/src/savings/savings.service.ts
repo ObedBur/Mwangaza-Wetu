@@ -14,7 +14,10 @@ export class SavingsService {
     private parametresService: ParametresService,
   ) {}
 
-  async findAll(type?: TypeOperation) {
+  async findAll(params: { page?: number; pageSize?: number; type?: TypeOperation }) {
+    const { page = 1, pageSize = 10, type } = params;
+    const skip = (page - 1) * pageSize;
+
     const where: { typeOperation?: PrismaTypeOperation; NOT?: any } = {};
     if (type) {
       where.typeOperation = type as unknown as PrismaTypeOperation;
@@ -22,14 +25,32 @@ export class SavingsService {
     // Jamais afficher les transactions du compte collectif dans le tableau général
     where.NOT = [
       { compte: 'MW-REVENUS-GLOBAL' },
+      { compte: { contains: 'REVENUS' } },
       { compte: { contains: 'SECTION-0000' } },
     ];
 
-    return this.prisma.epargne.findMany({
-      where,
-      include: { membre: true },
-      orderBy: { dateOperation: 'desc' },
-    });
+    const [total, data] = await Promise.all([
+      this.prisma.epargne.count({ where }),
+      this.prisma.epargne.findMany({
+        where,
+        include: { membre: true },
+        orderBy: { dateOperation: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+        hasNextPage: page * pageSize < total,
+        hasPrevPage: page > 1,
+      },
+    };
   }
 
   async findByCompte(compte: string) {

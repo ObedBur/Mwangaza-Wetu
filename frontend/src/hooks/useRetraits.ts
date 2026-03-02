@@ -47,6 +47,8 @@ export const useRetraits = (params: FetchRetraitsParams = { page: 1, pageSize: 1
   return useQuery({
     queryKey: ['retraits', params],
     queryFn: () => fetchRetraits(params),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
 

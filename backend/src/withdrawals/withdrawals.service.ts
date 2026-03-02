@@ -21,31 +21,43 @@ export class WithdrawalsService {
       return params.retraits.frais_retrait[devise];
     }
 
-    // Fallback
+    // Official BCC Rate for strict equivalence
+    const TAUX_BCC = 2217.3;
+    const SEUIL_50_USD = 50;
+    const SEUIL_200_USD = 200;
+
+    const SEUIL_50_FC = SEUIL_50_USD * TAUX_BCC; // 110,865 FC
+    const SEUIL_200_FC = SEUIL_200_USD * TAUX_BCC; // 443,460 FC
+
     if (devise === 'FC') {
       return [
-        { max: 50000, taux: 0.03 },
-        { max: 500000, taux: 0.025 },
-        { max: 999999999, taux: 0.02 },
+        { max: SEUIL_50_FC, taux: 0.03 },
+        { max: SEUIL_200_FC, taux: 0.025 },
+        { max: Infinity, taux: 0.015 },
       ];
     }
     return [
-      { max: 50, taux: 0.03 },
-      { max: 500, taux: 0.025 },
-      { max: 999999, taux: 0.02 },
+      { max: SEUIL_50_USD, taux: 0.03 },
+      { max: SEUIL_200_USD, taux: 0.025 },
+      { max: Infinity, taux: 0.015 },
     ];
   }
 
   private async calculateFees(montant: number, devise: string) {
     const structure = await this.getFeesConfig(devise);
-    let frais = 0;
-    let restant = montant;
+    
+    // Non-progressive calculation (based on total amount)
+    let tauxApplique = 0.03; // Default for lowest tier
+
     for (const palier of structure) {
-      if (restant <= 0) break;
-      const portion = Math.min(restant, palier.max);
-      frais += portion * palier.taux;
-      restant -= portion;
+      if (montant <= palier.max) {
+        tauxApplique = palier.taux;
+        break;
+      }
+      tauxApplique = palier.taux; // Case for last tier (Infinity)
     }
+
+    const frais = montant * tauxApplique;
     return Math.round(frais * 100) / 100;
   }
 
@@ -188,6 +200,54 @@ export class WithdrawalsService {
         },
       });
 
+      // 2. Enregistrer le revenu de retrait si des frais sont appliqués
+      if (frais > 0) {
+        const revType = await tx.revenuType.findFirst({
+          where: { nom: 'Système Retrait' },
+        });
+
+        if (revType) {
+          // 2.1 Enregistrement dans la table Revenu (Nouvelle architecture)
+          await tx.revenu.create({
+            data: {
+              typeCompte: membre.typeCompte,
+              typeRevenuId: revType.id,
+              montant: frais,
+              devise: devise as Devise,
+              dateOperation: dateO,
+              sourceCompte: compte,
+              referenceId: retrait.reference,
+            },
+          });
+
+          // 2.2 Enregistrement sur le compte de REVENUS de la section
+          const sectionTrigram = getSectionTrigram(membre.typeCompte);
+          const revenueAccount = `MW-${sectionTrigram}-REVENUS`;
+
+          await tx.epargne.create({
+            data: {
+              compte: revenueAccount,
+              typeOperation: 'depot',
+              devise: devise as Devise,
+              montant: frais,
+              dateOperation: dateO,
+              description: `Frais retrait membre ${compte}`,
+            },
+          });
+
+          // 2.3 Enregistrement sur le compte REVENUS GLOBAL
+          await tx.epargne.create({
+            data: {
+              compte: 'MW-REVENUS-GLOBAL',
+              typeOperation: 'depot',
+              devise: devise as Devise,
+              montant: frais,
+              dateOperation: dateO,
+              description: `Frais retrait membre ${compte} (via ${membre.typeCompte})`,
+            },
+          });
+        }
+      }
 
       return retrait;
     });

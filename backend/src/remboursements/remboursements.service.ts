@@ -55,6 +55,53 @@ export class RemboursementsService {
         },
       });
 
+      // 2. Enregistrer le revenu d'intérêt (15% du montant remboursé)
+      const interet = Math.round(Number(montant) * 0.15 * 100) / 100;
+      const revType = await tx.revenuType.findFirst({
+        where: { nom: 'Système Remboursement' },
+      });
+
+      if (revType && interet > 0) {
+        // 2.1 Enregistrement dans la table Revenu (Nouvelle architecture)
+        await tx.revenu.create({
+          data: {
+            typeCompte: credit.membre.typeCompte,
+            typeRevenuId: revType.id,
+            montant: interet,
+            devise: devise as Devise,
+            dateOperation: dateR,
+            sourceCompte: credit.numeroCompte,
+            referenceId: remboursement.id.toString(),
+          },
+        });
+
+        // 2.2 Enregistrement sur le compte de REVENUS de la section
+        const sectionTrigram = getSectionTrigram(credit.membre.typeCompte);
+        const revenueAccount = `MW-${sectionTrigram}-REVENUS`;
+
+        await tx.epargne.create({
+          data: {
+            compte: revenueAccount,
+            typeOperation: 'depot',
+            devise: devise as Devise,
+            montant: interet,
+            dateOperation: dateR,
+            description: `Intérêts remboursement crédit ${credit.numeroCompte}`,
+          },
+        });
+
+        // 2.3 Enregistrement sur le compte REVENUS GLOBAL
+        await tx.epargne.create({
+          data: {
+            compte: 'MW-REVENUS-GLOBAL',
+            typeOperation: 'depot',
+            devise: devise as Devise,
+            montant: interet,
+            dateOperation: dateR,
+            description: `Intérêts remboursement crédit ${credit.numeroCompte} (via ${credit.membre.typeCompte})`,
+          },
+        });
+      }
 
       const montantTotalAttendu =
         Number(credit.montant) * (1 + Number(credit.tauxInteret) / 100);

@@ -15,10 +15,6 @@ export class CreateCreditDto {
   @IsNotEmpty()
   montant: number;
 
-  @IsNumber()
-  @IsOptional()
-  montantRembourse?: number;
-
   @IsString()
   @IsNotEmpty()
   devise: string;
