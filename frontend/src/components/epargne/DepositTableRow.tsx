@@ -17,9 +17,27 @@ export default function DepositTableRow({ tx }: { tx: DepositTransaction }) {
 
   return (
     <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
-      <td className="px-4 sm:px-6 py-4">
+      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+        <div className="text-sm font-medium text-slate-900 dark:text-white">
+          {formatDate(tx.dateOperation)}
+        </div>
+        <div className="text-xs text-slate-400">
+          {new Date(tx.dateOperation).toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </div>
+      </td>
+
+      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+        <span className="font-mono text-sm font-bold text-primary">
+          {tx.compte}
+        </span>
+      </td>
+
+      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
         <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 rounded-full overflow-hidden shadow-sm shrink-0 bg-primary/10 flex items-center justify-center">
+          <div className="relative w-8 h-8 rounded-full overflow-hidden shadow-sm shrink-0 bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
             {tx.membre?.photoProfil && !imageError ? (
               <img
                 src={getPhotoUrl(tx.membre.photoProfil)}
@@ -28,9 +46,7 @@ export default function DepositTableRow({ tx }: { tx: DepositTransaction }) {
                 onError={() => setImageError(true)}
               />
             ) : (
-              <span className="text-primary font-bold text-sm">
-                {initials(tx.membre?.nomComplet || "??")}
-              </span>
+                initials(tx.membre?.nomComplet || "??")
             )}
           </div>
           <div>
@@ -43,43 +59,20 @@ export default function DepositTableRow({ tx }: { tx: DepositTransaction }) {
                 </span>
               )}
             </div>
-            <div className="text-xs text-slate-500">#{tx.compte}</div>
           </div>
         </div>
       </td>
 
-      <td className="px-4 sm:px-6 py-4 font-bold text-slate-900 dark:text-white">
-        {formatAmount(tx.montant)}
-      </td>
-
-      <td className="px-4 sm:px-6 py-4 text-center">
-        <span
-          className={
-            tx.devise === "FC"
-              ? "px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded text-[10px] font-bold"
-              : "px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-[10px] font-bold"
-          }
-        >
-          {tx.devise}
-        </span>
-      </td>
-
-      <td className="px-4 sm:px-6 py-4">
-        <div className="text-sm text-slate-600 dark:text-slate-200">
-          {formatDate(tx.dateOperation)}
-        </div>
-        <div className="text-[10px] text-slate-400 italic">
-          {new Date(tx.dateOperation).toLocaleTimeString("fr-FR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right">
+        <div className="text-sm font-bold text-slate-900 dark:text-white">
+          {formatAmount(tx.montant)} {tx.devise}
         </div>
       </td>
 
       <td className="px-4 sm:px-6 py-4">
-        <div className="text-xs text-slate-500 truncate max-w-[150px]">
+        <p className="text-sm text-slate-500 truncate max-w-[150px]">
           {tx.description || "-"}
-        </div>
+        </p>
       </td>
 
       <td className="px-4 sm:px-6 py-4">

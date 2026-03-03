@@ -23,12 +23,15 @@ const fetchMembers = async (params: FetchMembersParams): Promise<PaginatedRespon
       params
     });
     return data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur lors de la récupération des membres:', error);
 
     // Si c'est une erreur 500, on la propage pour que le composant puisse l'afficher
-    if (error.response?.status === 500) {
-      throw new Error('Erreur serveur: Le service est temporairement indisponible');
+    if (error && typeof error === 'object' && 'response' in error) {
+      const response = error.response as { status?: number };
+      if (response?.status === 500) {
+        throw new Error('Erreur serveur: Le service est temporairement indisponible');
+      }
     }
 
     // Pour les autres erreurs (404, réseau, etc.), on retourne des données vides
@@ -68,29 +71,20 @@ const generateAccountNumber = async (params: { typeCompte: string; dateAdhesion:
       }
     });
     return data;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erreur lors de la génération du numéro de compte:', error);
     // Fallback: calculer le prochain numéro basé sur les comptes existants
-    return calculateNextAccountNumberFallback(params.typeCompte, params.dateAdhesion);
+    return calculateNextAccountNumberFallback(params.typeCompte);
   }
 };
 
-const calculateNextAccountNumberFallback = async (typeCompte: string, dateAdhesion: string): Promise<{ numero: string }> => {
+const calculateNextAccountNumberFallback = async (typeCompte: string): Promise<{ numero: string }> => {
   try {
-    const year = dateAdhesion ? new Date(dateAdhesion).getFullYear() : new Date().getFullYear();
-
     // Trouver le bon préfixe basé sur le type de compte
     const accountTypeConfig = ACCOUNT_TYPES.find(t => t.value === typeCompte);
     const typePrefix = accountTypeConfig?.prefix || 'P';
 
-    // Récupérer tous les membres pour trouver le dernier numéro du même type
-    const { data: allMembers } = await apiClient.get<PaginatedResponse<MemberRecord>>(API_ROUTES.MEMBRES, {
-      params: { pageSize: 1000 }
-    });
-
-    const members = allMembers.data || [];
-
-    // Format attendu: MW-TRI-RANDOM6
+    // Pour le moment on utilise un format simple aléatoire pour le fallback urgent
     const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase().padEnd(6, '0');
     return { numero: `MW-${typePrefix}-${randomPart}` };
   } catch (err) {
@@ -194,7 +188,7 @@ export const useMemberByAccount = (
   return useQuery({
     queryKey: ['memberByAccount', numeroCompte],
     queryFn: async () => {
-      const { data } = await apiClient.get<MemberRecord>(`${API_ROUTES.MEMBRES}/by-account/${encodeURIComponent(numeroCompte)}`);
+      const { data } = await apiClient.get<MemberRecord>(`${API_ROUTES.MEMBRES}/by-numero/${encodeURIComponent(numeroCompte)}`);
       return data;
     },
     enabled: options?.enabled !== undefined ? options.enabled : !!numeroCompte,
@@ -232,8 +226,9 @@ export const useMemberSearch = (query: string, options?: { enabled?: boolean }) 
           params: { search: query, pageSize: 20 }
         });
         return data.data || [];
-      } catch (error: any) {
-        console.warn('Recherche autocomplete via /membres non disponible:', error.message);
+      } catch (error: unknown) {
+        const err = error as Error;
+        console.warn('Recherche autocomplete via /membres non disponible:', err.message);
         return [];
       }
     },

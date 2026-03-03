@@ -102,10 +102,7 @@ export default function CreditsTable() {
           <thead className="uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-medium">
             <tr>
               <th className="px-6 py-4" scope="col">
-                ID Dossier
-              </th>
-              <th className="px-6 py-4" scope="col">
-                Client
+                Membre
               </th>
               <th className="px-6 py-4" scope="col">
                 Montant
@@ -127,7 +124,7 @@ export default function CreditsTable() {
           <tbody className="text-slate-600 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
             {creditsList.length === 0 ? (
               <tr>
-                <td className="px-6 py-12" colSpan={7}>
+                <td className="px-6 py-12" colSpan={6}>
                   <div className="flex flex-col items-center justify-center gap-2">
                     <p className="text-slate-500">
                       Aucun crédit pour le moment.

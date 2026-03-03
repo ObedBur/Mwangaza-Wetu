@@ -5,12 +5,17 @@ import { apiClient } from '@/lib/apiClient';
 import { API_ROUTES, withId } from '@/config/api';
 import { PaginatedResponse } from '@/types/common';
 
+interface CurrencyStats {
+  usd: number;
+  fc: number;
+}
+
 /** Statistiques agrégées des crédits retournées par le backend */
 export interface CreditStats {
-  totalAmount: number;
-  activeAmount: number;
-  overdueAmount: number;
-  availableBalance: number;
+  totalAmount: CurrencyStats;
+  activeAmount: CurrencyStats;
+  overdueAmount: CurrencyStats;
+  availableBalance: CurrencyStats;
   totalCount: number;
   activeCount: number;
   overdueCount: number;
@@ -166,5 +171,40 @@ export const useCreditStats = () => {
     refetchOnWindowFocus: false,
     // Ne pas lancer d'erreur si l'endpoint n'existe pas encore
     retry: false,
+  });
+};
+
+/**
+ * Hook pour récupérer le crédit actif d'un membre à partir de son numéro de compte.
+ * Utile pour l'autofill dans la modale de remboursement.
+ */
+export const useActiveCreditByAccount = (numeroCompte?: string) => {
+  return useQuery({
+    queryKey: ['memberActiveCredit', numeroCompte],
+    queryFn: async () => {
+      if (!numeroCompte) return null;
+      try {
+        const { data } = await apiClient.get<any[]>(`${API_ROUTES.CREDITS}/membre/${numeroCompte}`);
+        if (!data || data.length === 0) return null;
+
+        // Trouver le premier crédit actif ou en retard
+        const activeCredit = data.find((c) => c.statut === 'actif' || c.statut === 'en_retard');
+        if (!activeCredit) return null;
+
+        // Calculer le montant restant
+        const remainingAmount = Number(activeCredit.montant) -
+          (activeCredit.remboursements?.reduce((sum: number, r: any) => sum + Number(r.montant), 0) ?? 0);
+
+        return {
+          ...activeCredit,
+          remainingAmount
+        };
+      } catch (error) {
+        console.error('Erreur lors de la récupération du crédit actif:', error);
+        return null; // Silent fail pour ne pas bloquer l'UI si pas de crédit
+      }
+    },
+    enabled: !!numeroCompte && numeroCompte.length >= 5, // Uniquement si un numéro est saisi
+    staleTime: 1000 * 60, // 1 minute
   });
 };

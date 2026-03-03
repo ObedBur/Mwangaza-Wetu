@@ -34,23 +34,38 @@ export default function DepositsTable() {
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
       {/* Header */}
-      <div className="px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-        <h2 className="font-bold text-slate-900 dark:text-white">
-          Historique des transactions
+      <div className="px-4 sm:px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          Historique des Transactions
+          <span className="text-xs font-normal bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full">
+            {new Intl.NumberFormat("fr-FR").format(meta?.total ?? 0)} total
+          </span>
         </h2>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-left">
-          <thead className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 uppercase text-[11px] font-bold tracking-wider">
+          <thead className="bg-slate-50 dark:bg-slate-800/50">
             <tr>
-              <th className="px-4 sm:px-6 py-4">Membre</th>
-              <th className="px-4 sm:px-6 py-4">Montant</th>
-              <th className="px-4 sm:px-6 py-4 text-center">Devise</th>
-              <th className="px-4 sm:px-6 py-4">Date</th>
-              <th className="px-4 sm:px-6 py-4">Cumul FC/USD</th>
-              <th className="px-4 sm:px-6 py-4">Actions</th>
+              <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Numéro de Compte
+              </th>
+              <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Membre
+              </th>
+              <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">
+                Montant Déposé
+              </th>
+              <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                Motif
+              </th>
+              <th className="px-4 sm:px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

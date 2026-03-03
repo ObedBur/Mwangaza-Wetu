@@ -108,6 +108,8 @@ export default function CreateWithdrawalModal({
       if (memberByZk.numeroCompte) {
         setValue("compte", memberByZk.numeroCompte, {
           shouldValidate: true,
+          shouldDirty: true,
+          shouldTouch: true,
         });
       }
 
@@ -171,10 +173,9 @@ export default function CreateWithdrawalModal({
 
   if (!isOpen) return null;
 
-  // Calculs Sidebar
   const isProfileLoading = isExactMemberFetching || isFetchingByZk;
-  const isProfileError = isMemberNotFound;
   const profileData = (memberByZk || exactMemberData) as MemberRecord | null | undefined;
+  const isProfileError = isMemberNotFound && !profileData;
 
   const memberInitials = profileData?.nomComplet
     ? profileData.nomComplet.substring(0, 2).toUpperCase()
@@ -235,22 +236,7 @@ export default function CreateWithdrawalModal({
                 </p>
               )}
 
-              {/* Affichage de la personne identifiée par biométrie */}
-              {identifiedPerson && (
-                <div className="mt-4 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/30 rounded-xl p-3 flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
-                  <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-800/40 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
-                    <CheckCircle className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-green-600 dark:text-green-400 font-bold uppercase tracking-wider">
-                      Scanné par : <span className="underline">{identifiedPerson.role}</span>
-                    </p>
-                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                      {identifiedPerson.name}
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* L'affichage "Scanné par : Délégué/Membre" a été déplacé au-dessus de l'input et n'est plus dupliqué ici */}
 
               {/* Mini profil membre */}
               <div className="mt-6 p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-3 min-h-[72px]">
@@ -270,14 +256,14 @@ export default function CreateWithdrawalModal({
                 ) : profileData ? (
                   <>
                     <div className="h-12 w-12 rounded-full bg-red-600/10 flex items-center justify-center text-red-600 font-bold text-sm shrink-0">
-                      {memberInitials}
+                          {profileData.nomComplet.substring(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                        {memberFullName}
+                            {profileData.nomComplet}
                       </p>
                       <p className="text-xs text-slate-500">
-                        Membre #{memberId}
+                            Membre #{profileData.id}
                       </p>
                       <div className="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
                         <CheckCircle className="w-2.5 h-2.5" />

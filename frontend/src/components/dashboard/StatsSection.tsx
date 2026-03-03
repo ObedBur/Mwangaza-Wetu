@@ -29,11 +29,11 @@ export default function StatsSection() {
 
     const savingsData = savings?.data ?? [];
     const totalSavingsFC = savingsData
-      .filter((s) => s.currency === "FC")
-      .reduce((sum: number, s) => sum + s.amount, 0);
+      .filter((s) => s.devise === "FC")
+      .reduce((sum: number, s) => sum + Number(s.montant), 0);
     const totalSavingsUSD = savingsData
-      .filter((s) => s.currency === "USD")
-      .reduce((sum: number, s) => sum + s.amount, 0);
+      .filter((s) => s.devise === "USD")
+      .reduce((sum: number, s) => sum + Number(s.montant), 0);
 
     const creditsData = credits?.data ?? [];
     const totalCreditsFC = creditsData

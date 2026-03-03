@@ -89,7 +89,7 @@ export const loanSchema = transactionSchema.extend({
   duree: z.coerce.number().int().positive("La durée doit être un nombre de mois positif"),
   tauxInteret: z.coerce.number().min(0, "Le taux d'intérêt ne peut pas être négatif"),
   biometricValidated: z.boolean().refine(val => val === true, "La validation biométrique est requise"),
-  adminPassword: z.string().min(1, "Le mot de passe administrateur est requis"),
+  adminPassword: z.string().optional(),
 });
 
 /**
@@ -100,7 +100,7 @@ export const repaymentSchema = transactionSchema.extend({
   pretId: z.string().min(1, "L'ID du prêt est requis"),
   devise: z.enum(["USD", "FC"]).default("FC"),
   biometricValidated: z.boolean().refine(val => val === true, "La validation biométrique est requise"),
-  adminPassword: z.string().min(1, "Le mot de passe administrateur est requis"),
+  adminPassword: z.string().optional(),
 });
 
 /**
@@ -126,7 +126,7 @@ export const cashierSchema = z.object({
   soldeInitial: z.coerce.number().min(0, "Le solde initial ne peut pas être négatif"),
   devise: z.enum(["USD", "FC"]).default("USD"),
   biometricValidated: z.boolean().refine(val => val === true, "La validation biométrique est requise"),
-  adminPassword: z.string().min(1, "Le mot de passe administrateur est requis"),
+  adminPassword: z.string().optional(),
 });
 
 /**
@@ -138,7 +138,7 @@ export const balanceSchema = z.object({
   devise: z.enum(["USD", "FC"]).default("USD"),
   soldeInitial: z.coerce.number().min(0, "Le solde initial ne peut pas être négatif"),
   biometricValidated: z.boolean().refine(val => val === true, "La validation biométrique est requise"),
-  adminPassword: z.string().min(1, "Le mot de passe administrateur est requis"),
+  adminPassword: z.string().optional(),
 });
 
 /**
@@ -156,7 +156,7 @@ export const accountingSchema = z.object({
   reference: z.string().optional(),
   description: z.string().min(5, "La description doit contenir au moins 5 caractères"),
   biometricValidated: z.boolean().refine(val => val === true, "La validation biométrique est requise"),
-  adminPassword: z.string().min(1, "Le mot de passe administrateur est requis"),
+  adminPassword: z.string().optional(),
 });
 
 // Exports des types via z.infer

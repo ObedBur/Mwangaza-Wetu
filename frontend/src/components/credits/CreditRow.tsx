@@ -26,10 +26,7 @@ const statusLabels: Record<CreditStatus, string> = {
 
 export default function CreditRow({ credit }: CreditRowProps) {
   return (
-    <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800/50">
-      <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
-        #{credit.id}
-      </td>
+    <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
@@ -49,7 +46,9 @@ export default function CreditRow({ credit }: CreditRowProps) {
       <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
         {formatDate(credit.startDate)}
       </td>
-      <td className="px-6 py-4">{credit.interestRate}%</td>
+      <td className="px-6 py-4 text-slate-900 dark:text-white font-medium">
+        {credit.interestRate}%
+      </td>
       <td className="px-6 py-4">
         <span
           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[credit.status]}`}

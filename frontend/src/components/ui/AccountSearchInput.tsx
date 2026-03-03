@@ -132,16 +132,14 @@ export default function AccountSearchInput({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                    {s.nomComplet}
+                    {s.prenom ? `${s.prenom} ` : ""}{s.nom || ""}
                   </p>
                   <p className="text-[10px] font-mono text-slate-500 truncate">
                     {s.numeroCompte}
                   </p>
                 </div>
                 <div className="shrink-0 scale-75 opacity-50">
-                  {s.statut === "actif" && (
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                  )}
+                  {/* Note: statut doesn't exist on AccountSuggestion from useAccountSearch, omit safely */}
                 </div>
               </button>
             ))}

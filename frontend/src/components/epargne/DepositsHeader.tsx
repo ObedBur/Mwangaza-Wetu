@@ -78,7 +78,7 @@ export default function DepositsHeader({ onCreateClick, transactions = [] }: Dep
               const logoWidth = 40;
               const logoHeight = 40;
               const logoX = (pageWidth - logoWidth) / 2;
-              doc.addImage(imgData, 'JPEG', logoX, 8, logoWidth, logoHeight);
+              doc.addImage(imgData as string, 'JPEG', logoX, 8, logoWidth, logoHeight);
             }
             resolve(null);
           };

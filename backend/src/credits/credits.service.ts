@@ -20,10 +20,70 @@ export class CreditsService {
   ) { }
 
   async findAll() {
-    return this.prisma.credit.findMany({
+    const credits = await this.prisma.credit.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { remboursements: true, membre: true },
+      include: { membre: true },
     });
+
+    return credits.map((credit) => this.mapCreditToResponse(credit));
+  }
+
+  async findAllPaginated(page: number = 1, pageSize: number = 10) {
+    const skip = (page - 1) * pageSize;
+
+    const [total, credits] = await Promise.all([
+      this.prisma.credit.count(),
+      this.prisma.credit.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: { membre: true },
+        skip,
+        take: pageSize,
+      }),
+    ]);
+
+    const data = credits.map((credit) => this.mapCreditToResponse(credit));
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+        hasNextPage: page * pageSize < total,
+        hasPrevPage: page > 1,
+      },
+    };
+  }
+
+  private mapCreditToResponse(credit: any) {
+    const remainingAmount = Number(credit.montant) - (credit.remboursements?.reduce((sum: number, r: any) => sum + Number(r.montant), 0) ?? 0);
+
+    const statusMap = {
+      [StatutCredit.actif]: 'active',
+      [StatutCredit.rembourse]: 'repaid',
+      [StatutCredit.en_retard]: 'overdue',
+    };
+
+    return {
+      id: credit.id.toString(),
+      memberName: credit.membre?.nomComplet || credit.numeroCompte,
+      memberRole: credit.membre?.typeCompte || '',
+      initials: credit.membre?.nomComplet
+        ? credit.membre.nomComplet
+          .split(' ')
+          .map((n: string) => n[0])
+          .join('')
+          .toUpperCase()
+        : 'N/A',
+      amount: Number(credit.montant),
+      remainingAmount,
+      currency: credit.devise,
+      startDate: credit.dateDebut.toISOString().split('T')[0],
+      interestRate: Number(credit.tauxInteret),
+      durationMonths: credit.duree,
+      status: statusMap[credit.statut] || 'active',
+    };
   }
 
   async findOne(id: number) {
@@ -54,6 +114,53 @@ export class CreditsService {
     const soldeFC = results.find((r) => r.devise === 'FC')?._sum.montant || 0;
 
     return { soldeUSD, soldeFC };
+  }
+
+  async getStats() {
+    try {
+      const credits = await this.prisma.credit.findMany({
+        select: {
+          id: true,
+          montant: true,
+          statut: true,
+          devise: true,
+        },
+      });
+
+      const getAmountByDevise = (statutFilter?: StatutCredit) => {
+        return {
+          usd: credits
+            .filter((c) => c.devise === 'USD' && (!statutFilter || c.statut === statutFilter))
+            .reduce((sum, c) => sum + Number(c.montant), 0),
+          fc: credits
+            .filter((c) => c.devise === 'FC' && (!statutFilter || c.statut === statutFilter))
+            .reduce((sum, c) => sum + Number(c.montant), 0),
+        };
+      };
+
+      const totalAmount = getAmountByDevise();
+      const activeAmount = getAmountByDevise(StatutCredit.actif);
+      const overdueAmount = getAmountByDevise(StatutCredit.en_retard);
+
+      const tresorerie = await this.balancesService.getTresorerieDisponible();
+      const availableBalance = {
+        usd: tresorerie.usd.disponible,
+        fc: tresorerie.fc.disponible,
+      };
+
+      return {
+        totalAmount,
+        activeAmount,
+        overdueAmount,
+        availableBalance,
+        totalCount: credits.length,
+        activeCount: credits.filter((c) => c.statut === StatutCredit.actif).length,
+        overdueCount: credits.filter((c) => c.statut === StatutCredit.en_retard).length,
+      };
+    } catch (error) {
+      this.logger.error('Erreur lors du calcul des statistiques des crédits:', error);
+      throw error;
+    }
   }
 
   // ────────────────────────────────────────────────────────────────────

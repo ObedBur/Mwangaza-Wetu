@@ -87,7 +87,11 @@ export default function CreateCreditModal({
   // Automatisation : dès que le membre est trouvé par ZK ID, on remplit le compte
   useEffect(() => {
     if (memberByZk) {
-      setValue("numeroCompte", memberByZk.numeroCompte);
+      setValue("numeroCompte", memberByZk.numeroCompte, {
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true,
+      });
     }
   }, [memberByZk, setValue]);
 
@@ -194,7 +198,7 @@ export default function CreateCreditModal({
                       <div className="h-2.5 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-1/2" />
                     </div>
                   </div>
-                ) : isMemberError ? (
+                ) : isMemberError && !memberData ? (
                   <div className="flex items-center gap-2 text-red-500 text-xs font-medium">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     Compte introuvable

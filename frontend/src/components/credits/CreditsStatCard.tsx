@@ -1,8 +1,9 @@
 import { Wallet, CheckCircle, AlertTriangle, PiggyBank, TrendingUp, TrendingDown } from 'lucide-react';
+import React from 'react';
 
 interface CreditsStatCardProps {
   title: string;
-  value: string;
+  value: React.ReactNode;
   trend: string;
   icon: 'wallet' | 'check' | 'warning' | 'savings';
   color: 'blue' | 'green' | 'red' | 'indigo';
@@ -55,8 +56,8 @@ export default function CreditsStatCard({ title, value, trend, icon, color }: Cr
         </span>
       </div>
       <div>
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">{title}</p>
-        <h3 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">{value}</h3>
+        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">{title}</p>
+        <div>{value}</div>
       </div>
     </div>
   );

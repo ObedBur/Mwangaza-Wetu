@@ -58,7 +58,7 @@ Content-Type: application/json
 
 ###
 
-### ⚠️ DANGER : Effacer les logs de l'appareil
+###  DANGER : Effacer les logs de l'appareil
 # Ne lancez ça que si vous êtes sûr d'avoir tout synchronisé !
 # Décommentez les lignes ci-dessous pour utiliser :
 POST {{baseUrl}}/{{controller}}/clear

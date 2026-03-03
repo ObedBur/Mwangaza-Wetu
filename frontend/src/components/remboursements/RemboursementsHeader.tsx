@@ -1,3 +1,4 @@
+//
 'use client'
 
 import { RefreshCw, FileText, Download, Plus } from 'lucide-react';
@@ -45,7 +46,7 @@ export default function RemboursementsHeader({ onCreateClick }: RemboursementsHe
           className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-md shadow-primary/20 ml-2"
         >
           <Plus className="w-4 h-4" />
-          <span>Nouveau Crédit</span>
+          <span>Nouveau Remboursement</span>
         </button>
       </div>
     </header>
