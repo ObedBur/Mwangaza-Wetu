@@ -26,11 +26,13 @@ const createWithdrawal = async (payload: WithdrawalInput): Promise<WithdrawalTra
   try {
     // Transformation pour correspondre au CreateWithdrawalDto du backend
     const backendPayload = {
-      compte: payload.numeroCompte,
+      compte: payload.compte,
       devise: payload.devise,
       montant: Number(payload.montant),
-      dateOperation: payload.date instanceof Date ? payload.date.toISOString() : new Date(payload.date).toISOString(),
-      description: payload.description || `Retrait sur le compte ${payload.numeroCompte}`
+      dateOperation: payload.dateOperation instanceof Date
+        ? payload.dateOperation.toISOString()
+        : new Date(payload.dateOperation).toISOString(),
+      description: payload.description || `Retrait sur le compte ${payload.compte}`
     };
 
     const { data } = await apiClient.post<WithdrawalTransaction>(API_ROUTES.WITHDRAWALS, backendPayload);

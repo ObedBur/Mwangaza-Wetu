@@ -11,12 +11,14 @@ import {
   EyeOff,
   Loader2,
   AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { loanSchema, LoanInput } from "@/lib/validations";
 import { useZkTeco } from "@/hooks/useZkTeco";
-import { useMemberByAccount } from "@/hooks/useMembers";
+import { useMemberByAccount, useMemberByZkId } from "@/hooks/useMembers";
 import { CURRENCIES } from "@/lib/constants";
 import { BiometricScanner } from "@/components/biometric";
+import { AdminVerificationModal } from "@/components/auth/AdminVerificationModal";
 
 interface CreateCreditModalProps {
   isOpen: boolean;
@@ -29,6 +31,10 @@ export default function CreateCreditModal({
   onClose,
   onSubmit,
 }: CreateCreditModalProps) {
+  // État pour la validation admin avant soumission
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<LoanInput | null>(null);
+
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -46,7 +52,7 @@ export default function CreateCreditModal({
       devise: "USD",
       tauxInteret: undefined,
       duree: undefined,
-      date: new Date(),
+      date: new Date().toISOString().split("T")[0] as any,
       biometricValidated: false,
       adminPassword: "",
     },
@@ -71,6 +77,19 @@ export default function CreateCreditModal({
     scanFingerprint: triggerScan,
     reset: resetBiometric,
   } = useZkTeco();
+
+  // ─── Récupération automatique par ZK ID ───────────────────────────────
+  const { data: memberByZk, isFetching: isFetchingByZk } = useMemberByZkId(
+    biometricUserId,
+    { enabled: biometricStatus === "success" }
+  );
+
+  // Automatisation : dès que le membre est trouvé par ZK ID, on remplit le compte
+  useEffect(() => {
+    if (memberByZk) {
+      setValue("numeroCompte", memberByZk.numeroCompte);
+    }
+  }, [memberByZk, setValue]);
 
   // Synchroniser l'état validé du formulaire avec le résultat du scan
   useEffect(() => {
@@ -102,10 +121,10 @@ export default function CreateCreditModal({
       endDate: isNaN(end.getTime())
         ? "--"
         : end.toLocaleDateString("fr-FR", {
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-          }),
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        }),
     };
   }, [montant, tauxInteret, duree, date]);
 
@@ -118,7 +137,7 @@ export default function CreateCreditModal({
         devise: "USD",
         tauxInteret: undefined,
         duree: undefined,
-        date: new Date(),
+        date: new Date().toISOString().split("T")[0] as any,
         biometricValidated: false,
         adminPassword: "",
       });
@@ -131,12 +150,10 @@ export default function CreateCreditModal({
 
   const biometricValidated = biometricStatus === "success";
 
-  const memberInitials = memberData
-    ? memberData.firstName[0] + memberData.lastName[0]
+  const memberInitials = memberData?.nomComplet
+    ? memberData.nomComplet.substring(0, 2).toUpperCase()
     : null;
-  const memberFullName = memberData
-    ? `${memberData.firstName} ${memberData.lastName}`
-    : null;
+  const memberFullName = memberData?.nomComplet || null;
 
   return (
     <>
@@ -151,14 +168,16 @@ export default function CreateCreditModal({
           <div className="w-full md:w-1/3 bg-slate-50 dark:bg-slate-800/50 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 p-6 flex flex-col gap-6 justify-between overflow-y-auto">
             <div>
               {/* Scanner biométrique partagé ─ même composant que membres */}
-              <BiometricScanner
-                label="Crédit"
-                status={biometricStatus}
-                error={biometricError}
-                userId={biometricUserId}
-                scanning={isBiometricPending}
-                onScan={triggerScan}
-              />
+              <div className="relative p-1 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-primary/20 backdrop-blur-md border border-white/20 shadow-inner">
+                <BiometricScanner
+                  label="Crédit"
+                  status={biometricStatus}
+                  error={biometricError}
+                  userId={biometricUserId}
+                  scanning={isBiometricPending}
+                  onScan={triggerScan}
+                />
+              </div>
               {errors.biometricValidated && (
                 <p className="text-red-500 text-[10px] mt-1 text-center">
                   {errors.biometricValidated.message}
@@ -187,16 +206,16 @@ export default function CreateCreditModal({
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                            {memberFullName}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            Membre #{memberData.id}
-                          </p>
-                          <div className="flex items-center gap-1 mt-1 text-xs text-primary font-medium">
-                            <CheckCircle className="w-3 h-3" />
-                            <span>Compte Vérifié</span>
-                          </div>
-                        </div>
+                        {memberFullName}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Membre #{memberData.id}
+                      </p>
+                      <div className="flex items-center gap-1 mt-1 text-xs text-primary font-medium">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>Compte Vérifié</span>
+                      </div>
+                    </div>
                   </>
                 ) : (
                   <p className="text-xs text-slate-400 italic">
@@ -206,41 +225,15 @@ export default function CreateCreditModal({
               </div>
             </div>
 
-            {/* Admin Validation Section */}
+            {/* Admin Validation Placeholder logic moved to modal */}
             <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                Validation Administrateur
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="text-slate-400 w-4 h-4" />
+              <div className="p-4 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 rounded-xl flex items-center gap-3">
+                <ShieldCheck className="w-6 h-6 text-orange-600 shrink-0" />
+                <div>
+                  <p className="text-[10px] font-black uppercase text-orange-800 dark:text-orange-400">Sécurité Système</p>
+                  <p className="text-[10px] text-orange-700 dark:text-orange-400 leading-tight">La validation administrateur sera demandée lors de la confirmation.</p>
                 </div>
-                <input
-                  className="block w-full pl-10 pr-10 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-                  placeholder="Mot de passe admin"
-                  type={showPassword ? "text" : "password"}
-                  {...register("adminPassword")}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
               </div>
-              {errors.adminPassword && (
-                <p className="text-red-500 text-[10px] mt-1">
-                  {errors.adminPassword.message}
-                </p>
-              )}
-              <p className="mt-2 text-[10px] text-slate-400 flex items-center gap-1">
-                <span>Action requise pour montants &gt; $5,000</span>
-              </p>
             </div>
           </div>
 
@@ -265,20 +258,42 @@ export default function CreateCreditModal({
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <form onSubmit={handleSubmit((data) => {
+                setPendingFormData(data);
+                setIsAdminModalOpen(true);
+              })} className="space-y-6">
                 {/* Account Details Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {/* Numéro de compte */}
-                  <div className="col-span-1 md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                      Numéro de compte d&apos;épargne source
-                    </label>
+                  <div className="col-span-1 md:col-span-2 space-y-2">
+                    <div className="flex justify-between items-end mb-1.5">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        Numéro de compte d&apos;épargne source
+                      </label>
+                      {biometricStatus === "success" && (
+                        <div className="animate-in fade-in slide-in-from-right-2 duration-300">
+                          {isFetchingByZk ? (
+                            <span className="flex items-center gap-1.5 text-[10px] text-primary font-bold uppercase tracking-wider">
+                              <Loader2 className="w-3 h-3 animate-spin" /> Recherche...
+                            </span>
+                          ) : memberByZk ? (
+                            <span className="flex items-center gap-1.5 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg text-[10px] font-black uppercase tracking-wider border border-green-100 dark:border-green-800/30 shadow-sm">
+                              <CheckCircle className="w-3 h-3" /> {memberByZk.nomComplet}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 px-2 py-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-[10px] font-black uppercase tracking-wider border border-red-100 dark:border-red-800/30 shadow-sm">
+                              <AlertCircle className="w-3 h-3" /> Membre Introuvable
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <input
-                      className={`block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary ${errors.numeroCompte
-                        ? "border-red-400"
-                        : "border-slate-200 dark:border-slate-700"
+                      className={`block w-full px-4 py-3 bg-white dark:bg-slate-800 border-2 rounded-xl text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none transition-all shadow-sm ${errors.numeroCompte
+                        ? "border-red-400 ring-4 ring-red-400/10"
+                        : "border-slate-100 dark:border-slate-800 focus:border-primary ring-0 focus:ring-4 focus:ring-primary/10"
                         }`}
-                      placeholder="ex: ACC-12345"
+                      placeholder="ex: MW-PRI-XXXXXX"
                       type="text"
                       {...register("numeroCompte")}
                     />
@@ -294,17 +309,17 @@ export default function CreateCreditModal({
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                       Montant du crédit
                     </label>
-                    <div className="relative">
+                    <div className="relative group">
                       <input
-                        className="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                        className="block w-full pl-4 pr-20 py-3.5 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-xl text-lg font-black text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
                         type="number"
                         min={0}
                         placeholder="0.00"
                         {...register("montant", { valueAsNumber: true })}
                       />
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-1.5">
                         <select
-                          className="border-0 bg-transparent text-slate-500 text-sm focus:ring-0 cursor-pointer"
+                          className="h-[calc(100%-12px)] px-3 border-0 bg-slate-100 dark:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-200 text-xs font-black focus:ring-0 cursor-pointer uppercase transition-colors"
                           {...register("devise")}
                         >
                           {CURRENCIES.map((c) => (
@@ -329,7 +344,7 @@ export default function CreateCreditModal({
                     </label>
                     <div className="relative">
                       <input
-                        className="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                        className="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                         type="number"
                         step="0.1"
                         min={0}
@@ -443,8 +458,13 @@ export default function CreateCreditModal({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="px-6 py-2.5 bg-primary rounded-lg text-sm font-bold text-white shadow-lg shadow-primary/30 hover:bg-blue-700 disabled:opacity-60 disabled:hover:bg-primary transition-all flex items-center gap-2"
+                    className="px-6 py-3 bg-primary rounded-xl text-sm font-bold text-white shadow-lg shadow-primary/30 hover:bg-blue-700 disabled:opacity-60 disabled:hover:bg-primary transition-all flex items-center gap-2 group relative overflow-hidden active:scale-95"
                   >
+                    {/* Shimmer Effect */}
+                    {!isSubmitting && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[100%] group-hover:animate-shimmer" />
+                    )}
+
                     {isSubmitting ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
@@ -460,6 +480,21 @@ export default function CreateCreditModal({
           </div>
         </div>
       </div>
+
+      <AdminVerificationModal
+        isOpen={isAdminModalOpen}
+        onClose={() => setIsAdminModalOpen(false)}
+        onVerified={(admin) => {
+          if (pendingFormData) {
+            // On injecte un dummy password car le schéma le requiert, 
+            // mais la vraie vérification a été faite par le modal
+            onSubmit({ ...pendingFormData, adminPassword: "verified_via_modal" });
+          }
+          setIsAdminModalOpen(false);
+          setPendingFormData(null);
+        }}
+        title="Validation Demande de Crédit"
+      />
     </>
   );
 }

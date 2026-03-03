@@ -78,7 +78,7 @@ const generateAccountNumber = async (params: { typeCompte: string; dateAdhesion:
 const calculateNextAccountNumberFallback = async (typeCompte: string, dateAdhesion: string): Promise<{ numero: string }> => {
   try {
     const year = dateAdhesion ? new Date(dateAdhesion).getFullYear() : new Date().getFullYear();
-    
+
     // Trouver le bon préfixe basé sur le type de compte
     const accountTypeConfig = ACCOUNT_TYPES.find(t => t.value === typeCompte);
     const typePrefix = accountTypeConfig?.prefix || 'P';
@@ -89,18 +89,18 @@ const calculateNextAccountNumberFallback = async (typeCompte: string, dateAdhesi
     });
 
     const members = allMembers.data || [];
-    
+
     // Format attendu: MW-TRI-RANDOM6
     const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase().padEnd(6, '0');
     return { numero: `MW-${typePrefix}-${randomPart}` };
   } catch (err) {
     console.warn('Fallback calculation failed, using backup:', err);
-    
+
     // Dernier fallback avec timestamp
     const accountTypeConfig = ACCOUNT_TYPES.find(t => t.value === typeCompte);
     const typePrefix = accountTypeConfig?.prefix || 'PRI';
     const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase().padEnd(6, '0');
-    
+
     return { numero: `MW-${typePrefix}-${randomPart}` };
   }
 };
@@ -194,13 +194,7 @@ export const useMemberByAccount = (
   return useQuery({
     queryKey: ['memberByAccount', numeroCompte],
     queryFn: async () => {
-      const { data } = await apiClient.get<{
-        id: number;
-        firstName: string;
-        lastName: string;
-        accountNumber: string;
-        status: string;
-      }>(`${API_ROUTES.MEMBRES}/by-account/${encodeURIComponent(numeroCompte)}`);
+      const { data } = await apiClient.get<MemberRecord>(`${API_ROUTES.MEMBRES}/by-account/${encodeURIComponent(numeroCompte)}`);
       return data;
     },
     enabled: options?.enabled !== undefined ? options.enabled : !!numeroCompte,

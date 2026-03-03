@@ -28,7 +28,7 @@ const fetchSavings = async (params: FetchSavingsParams): Promise<PaginatedRespon
     if (data?.data && Array.isArray(data.data)) {
       return data;
     }
-    
+
     // Si le backend renvoie un tableau simple (non paginé)
     if (Array.isArray(data)) {
       return {
@@ -64,12 +64,14 @@ const createSavings = async (payload: SavingsInput): Promise<DepositTransaction>
   try {
     // Transformation pour correspondre au CreateSavingsDto du backend
     const backendPayload = {
-      compte: payload.numeroCompte,
+      compte: payload.compte,
       typeOperation: 'depot',
       devise: payload.devise,
       montant: Number(payload.montant),
-      dateOperation: payload.date instanceof Date ? payload.date.toISOString() : new Date(payload.date).toISOString(),
-      description: payload.description || `Dépôt sur le compte ${payload.numeroCompte}`
+      dateOperation: payload.dateOperation instanceof Date
+        ? payload.dateOperation.toISOString()
+        : new Date(payload.dateOperation).toISOString(),
+      description: payload.description || `Dépôt sur le compte ${payload.compte}`
     };
 
     const { data } = await apiClient.post<DepositTransaction>(API_ROUTES.EPARGNES, backendPayload);
@@ -118,5 +120,18 @@ export const useCreateSavings = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['savings'] });
     },
+  });
+};
+export const useAccountSoldes = (numeroCompte: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['accountSoldes', numeroCompte],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ soldeFC: number; soldeUSD: number }>(
+        `${API_ROUTES.EPARGNES}/soldes/${encodeURIComponent(numeroCompte)}`
+      );
+      return data;
+    },
+    enabled: !!numeroCompte && (options?.enabled ?? true),
+    staleTime: 30000, // 30 seconds
   });
 };

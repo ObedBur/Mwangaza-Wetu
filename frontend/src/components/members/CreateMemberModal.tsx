@@ -9,6 +9,7 @@ import { useGenerateAccountNumber } from "@/hooks/useMembers";
 import { useZkTeco } from "@/hooks/useZkTeco";
 import { ACCOUNT_TYPES } from "@/lib/constants";
 import { BiometricScanner } from "@/components/biometric";
+import { AdminVerificationModal } from "@/components/auth/AdminVerificationModal";
 
 // Composant de téléchargement de photo premium
 const PhotoUpload = ({
@@ -97,6 +98,10 @@ export default function CreateMemberModal({
   const [memberPhoto, setMemberPhoto] = useState<string>("");
   const [deleguePhoto, setDeleguePhoto] = useState<string>("");
 
+  // État pour la validation admin avant soumission
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<MemberInput | null>(null);
+
   const { isScanning, scanStatus, scanError, userId, scanFingerprint } = useZkTeco({ mode: 'registration' });
   const delegueZk = useZkTeco({ mode: 'registration' });
 
@@ -179,13 +184,23 @@ export default function CreateMemberModal({
       }
     }
 
-    // 3. Envoyer les données propres
-    onSubmit(cleanData);
+    // ─── ÉTAPE DE SÉCURITÉ : Demander la validation Admin ───
+    setPendingFormData(cleanData);
+    setIsAdminModalOpen(true);
+  };
+
+  const onAdminVerified = () => {
+    if (!pendingFormData) return;
+
+    // 3. Envoyer les données propres finalisées
+    onSubmit(pendingFormData);
 
     // Reset et nettoyage local
     reset();
     setMemberPhoto("");
     setDeleguePhoto("");
+    setIsAdminModalOpen(false);
+    setPendingFormData(null);
   };
 
 
@@ -251,11 +266,10 @@ export default function CreateMemberModal({
                             shouldValidate: true,
                           })
                         }
-                        className={`p-2 sm:p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 ${
-                          typeCompte === type.value
-                            ? "border-primary bg-primary/5 text-primary"
-                            : "border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:border-slate-200 dark:hover:border-slate-600"
-                        }`}
+                        className={`p-2 sm:p-3 rounded-xl border-2 text-left transition-all flex flex-col gap-0.5 ${typeCompte === type.value
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:border-slate-200 dark:hover:border-slate-600"
+                          }`}
                       >
                         <span className="text-[10px] sm:text-xs font-bold uppercase truncate">
                           {type.label}
@@ -322,7 +336,7 @@ export default function CreateMemberModal({
                         type="text"
                         {...register("nomComplet")}
                         placeholder="e.g. Jean Kabila"
-                        className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
+                        className="w-full bg-white dark:bg-slate-700 border-2 border-slate-100 dark:border-slate-600 rounded-xl text-sm font-medium p-3 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all shadow-sm"
                       />
                       {errors.nomComplet && (
                         <p className="text-red-500 text-[10px] mt-1">
@@ -479,14 +493,16 @@ export default function CreateMemberModal({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-4">
-                  <BiometricScanner
-                    status={scanStatus}
-                    error={scanError}
-                    userId={userId}
-                    scanning={isScanning}
-                    onScan={scanFingerprint}
-                    label="Membre Titulaire"
-                  />
+                  <div className="relative p-1 rounded-2xl bg-gradient-to-br from-primary/20 to-blue-500/20 backdrop-blur-md border border-white/20 shadow-inner">
+                    <BiometricScanner
+                      status={scanStatus}
+                      error={scanError}
+                      userId={userId}
+                      scanning={isScanning}
+                      onScan={scanFingerprint}
+                      label="Membre Titulaire"
+                    />
+                  </div>
                 </div>
 
                 <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 rounded-xl p-4 flex flex-col justify-center">
@@ -616,14 +632,16 @@ export default function CreateMemberModal({
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <BiometricScanner
-                      status={delegueZk.scanStatus}
-                      error={delegueZk.scanError}
-                      userId={delegueZk.userId}
-                      scanning={delegueZk.isScanning}
-                      onScan={delegueZk.scanFingerprint}
-                      label="Délégué"
-                    />
+                    <div className="relative p-1 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-primary/20 backdrop-blur-md border border-white/20 shadow-inner">
+                      <BiometricScanner
+                        status={delegueZk.scanStatus}
+                        error={delegueZk.scanError}
+                        userId={delegueZk.userId}
+                        scanning={delegueZk.isScanning}
+                        onScan={delegueZk.scanFingerprint}
+                        label="Délégué"
+                      />
+                    </div>
 
                     <div className="flex items-center justify-center p-4">
                       <button
@@ -665,6 +683,14 @@ export default function CreateMemberModal({
           </div>
         </div>
       </div>
+
+      {/* Modal de Validation Admin */}
+      <AdminVerificationModal
+        isOpen={isAdminModalOpen}
+        onClose={() => setIsAdminModalOpen(false)}
+        onVerified={onAdminVerified}
+        title="Validation Création Membre"
+      />
     </>
   );
 }

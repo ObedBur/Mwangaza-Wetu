@@ -36,18 +36,20 @@ export const API_ROUTES = {
   SOLDE: '/solde',
 
   // ─── Auth ─────────────────────────────────────────
-  AUTH_LOGIN: '/auth/login',
+  AUTH_LOGIN: '/auth/login',         // Ancien login générique
+  AUTH_ADMIN_LOGIN: '/auth/admin/login',
+  AUTH_MEMBER_LOGIN: '/auth/membre/login',
   AUTH_REGISTER: '/auth/register',
   AUTH_LOGOUT: '/auth/logout',
   AUTH_ME: '/auth/me',              // Profil utilisateur connecté
   AUTH_REFRESH: '/auth/refresh',
-  
+
   // ─── Guichets ─────────────────────────────────────
   GUICHETS: '/guichets',           // ✅ Tu as la page mais pas la route
-  
+
   // ─── Comptabilité ─────────────────────────────────
-  COMPTABILITE: '/comptabilite', 
-  
+  COMPTABILITE: '/comptabilite',
+
   // ─── Admin ────────────────────────────────────────
   ADMIN: '/admin',
 

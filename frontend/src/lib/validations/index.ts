@@ -50,21 +50,34 @@ export const transactionSchema = z.object({
 });
 
 /**
- * SavingsSchema (Épargne) : Étend TransactionSchema
+ * SavingsSchema (Épargne) : Aligné sur le backend CreateSavingsDto
  */
-export const savingsSchema = transactionSchema.extend({
-  numeroCompte: z.string().min(1, "Le numéro de compte est requis"),
+export const savingsSchema = z.object({
+  compte: z.string().min(1, "Le numéro de compte est requis"),
+  typeOperation: z.enum(["depot", "retrait"]).default("depot"),
   devise: z.enum(["USD", "FC"]).default("FC"),
-  biometricValidated: z.boolean().default(false),
+  montant: z.coerce.number().positive("Le montant doit être strictement positif"),
+  dateOperation: z.coerce.date({
+    required_error: "La date est requise",
+    invalid_type_error: "Format de date invalide",
+  }), // Note: backend expects string for dateOperation, but in hook-form using date object is easier, you transform to string on submit
+  description: z.string().optional(),
+  biometricValidated: z.boolean().refine(val => val === true, "La validation biométrique est requise"),
 });
 
 /**
- * WithdrawalSchema (Retrait) : Étend TransactionSchema - Identique à SavingsSchema pour cohérence UI
+ * WithdrawalSchema (Retrait) : Aligné sur le backend
  */
-export const withdrawalSchema = transactionSchema.extend({
-  numeroCompte: z.string().min(1, "Le numéro de compte est requis"),
+export const withdrawalSchema = z.object({
+  compte: z.string().min(1, "Le numéro de compte est requis"),
   devise: z.enum(["USD", "FC"]).default("FC"),
-  biometricValidated: z.boolean().default(false),
+  montant: z.coerce.number().positive("Le montant doit être strictement positif"),
+  dateOperation: z.coerce.date({
+    required_error: "La date est requise",
+    invalid_type_error: "Format de date invalide",
+  }),
+  description: z.string().optional(),
+  biometricValidated: z.boolean().refine(val => val === true, "La validation biométrique est requise"),
 });
 
 /**
