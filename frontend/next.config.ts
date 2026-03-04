@@ -4,31 +4,29 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
       },
     ],
   },
-  
-  // ✅ Configuration du proxy pour les API
+
   async rewrites() {
     return [
       {
-        source: '/api/:path*',
-        destination: 'http://localhost:3000/api/:path*', // Backend sur port 3000
+        source: "/api/:path*",
+        destination: "http://localhost:3000/api/:path*",
       },
     ];
   },
-  
-  // ✅ Headers de sécurité
+
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         ],
       },
     ];

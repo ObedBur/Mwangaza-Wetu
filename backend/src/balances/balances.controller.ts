@@ -11,6 +11,11 @@ export class BalancesController {
     return this.balancesService.getTotal();
   }
 
+  @Get('dashboard')
+  async getDashboard() {
+    return this.balancesService.getDashboardOverview();
+  }
+
   @Get('type/:type_compte')
   async getByType(@Param('type_compte') typeCompte: string) {
     return this.balancesService.getByType(typeCompte);

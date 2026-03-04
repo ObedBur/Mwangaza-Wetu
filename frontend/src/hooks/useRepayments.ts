@@ -33,12 +33,14 @@ const createRepayment = async (payload: RepaymentInput): Promise<RepaymentRecord
       description: payload.description || `Remboursement du prêt #${payload.pretId}`
     };
 
-    const { data } = await apiClient.post<RepaymentRecord>(API_ROUTES.REMBOURSEMENTS, backendPayload);
+    const { data } = await apiClient.post<RepaymentRecord>(API_ROUTES.REMBOURSEMENTS_ADD, backendPayload);
     return data;
   } catch (error: any) {
-    console.error('Erreur lors de la création du remboursement:', error);
-    const backendMsg = error.response?.data?.message;
-    const msg = Array.isArray(backendMsg) ? backendMsg.join(', ') : backendMsg;
+    // L'apiClient normalise déjà les erreurs Axios en { message, status, data }
+    // On lit donc error.message directement, pas error.response?.data?.message
+    const rawMsg = error?.message;
+    const msg = Array.isArray(rawMsg) ? rawMsg.join(', ') : rawMsg;
+    console.error('Erreur lors de la création du remboursement:', msg || error);
     throw new Error(msg || 'Impossible de créer ce remboursement. Veuillez réessayer.');
   }
 };

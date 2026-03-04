@@ -57,7 +57,11 @@ export class CreditsService {
   }
 
   private mapCreditToResponse(credit: any) {
-    const remainingAmount = Number(credit.montant) - (credit.remboursements?.reduce((sum: number, r: any) => sum + Number(r.montant), 0) ?? 0);
+    const totalPrincipal = Number(credit.montant);
+    const taux = Number(credit.tauxInteret) || 15;
+    const totalA_Payer = totalPrincipal * (1 + taux / 100);
+    const dejaPaye = Number(credit.montantRembourse) || 0;
+    const remainingAmount = Math.max(0, totalA_Payer - dejaPaye);
 
     const statusMap = {
       [StatutCredit.actif]: 'active',

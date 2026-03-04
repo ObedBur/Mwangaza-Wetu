@@ -31,9 +31,12 @@ export const API_ROUTES = {
 
   // ─── Remboursements ───────────────────────────────
   REMBOURSEMENTS: '/remboursements',
+  REMBOURSEMENTS_ADD: '/remboursements/add',
 
   // ─── Solde (Balances) ─────────────────────────────
   SOLDE: '/solde',
+  SOLDE_TOTAL: '/solde/total',
+  SOLDE_DASHBOARD: '/solde/dashboard',
 
   // ─── Auth ─────────────────────────────────────────
   AUTH_LOGIN: '/auth/login',         // Ancien login générique

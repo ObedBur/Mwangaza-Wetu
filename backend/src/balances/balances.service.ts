@@ -317,4 +317,79 @@ export class BalancesService {
       },
     };
   }
+
+  async getDashboardOverview() {
+    const total = await this.getTotal();
+    const tresorerie = await this.getTresorerieDisponible();
+
+    // Récupérer les soldes par type de membre
+    const types = ['PRIVILEGE', 'ORDINAIRE', 'DELERE', 'ENTREPRISE'];
+    const byType = await Promise.all(
+      types.map(async (t) => ({
+        type: t,
+        ...(await this.getByType(t)),
+      })),
+    );
+
+    // Evolution mensuelle (6 derniers mois)
+    const history = await this.getMonthlyHistory();
+
+    return {
+      overview: {
+        totalCaisse: { usd: total.usd.solde, fc: total.fc.solde },
+        totalEpargne: { usd: total.usd.epargne, fc: total.fc.epargne },
+        totalRetrait: { usd: total.usd.retrait, fc: total.fc.retrait },
+        totalFrais: { usd: total.usd.frais, fc: total.fc.frais },
+        totalRevenus: { usd: total.usd.benefices, fc: total.fc.benefices },
+        totalCredits: { usd: total.usd.credit, fc: total.fc.credit },
+      },
+      tresorerie,
+      byType,
+      history,
+    };
+  }
+
+  async getMonthlyHistory() {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const epargnes = await this.prisma.epargne.findMany({
+      where: { dateOperation: { gte: sixMonthsAgo } },
+      select: {
+        dateOperation: true,
+        montant: true,
+        typeOperation: true,
+        devise: true,
+      },
+    });
+
+    const months = [...new Array(6)]
+      .map((_, i) => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        return d.toISOString().substring(0, 7); // YYYY-MM
+      })
+      .reverse();
+
+    return months.map((month) => {
+      const filtered = epargnes.filter((e) =>
+        e.dateOperation.toISOString().startsWith(month),
+      );
+      return {
+        month,
+        depotsUSD: filtered
+          .filter((e) => e.devise === 'USD' && e.typeOperation === 'depot')
+          .reduce((sum, e) => sum + Number(e.montant), 0),
+        retraitsUSD: filtered
+          .filter((e) => e.devise === 'USD' && e.typeOperation === 'retrait')
+          .reduce((sum, e) => sum + Number(e.montant), 0),
+        depotsFC: filtered
+          .filter((e) => e.devise === 'FC' && e.typeOperation === 'depot')
+          .reduce((sum, e) => sum + Number(e.montant), 0),
+        retraitsFC: filtered
+          .filter((e) => e.devise === 'FC' && e.typeOperation === 'retrait')
+          .reduce((sum, e) => sum + Number(e.montant), 0),
+      };
+    });
+  }
 }

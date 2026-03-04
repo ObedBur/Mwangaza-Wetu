@@ -61,15 +61,28 @@ export class RemboursementsService {
       orderBy: { dateRemboursement: 'desc' },
       skip,
       take,
+      include: {
+        credit: {
+          include: { membre: true },
+        },
+      },
     });
 
     const total = await this.prisma.remboursement.count({
       where: { creditId, deletedAt: null },
     });
 
+    const page = Math.floor(skip / take) + 1;
     return {
       data: remboursements.map((r) => this.mapToResponse(r)),
-      meta: { total, page: Math.floor(skip / take) + 1, pageSize: take },
+      meta: {
+        total,
+        page,
+        pageSize: take,
+        totalPages: Math.ceil(total / take),
+        hasPrevPage: page > 1,
+        hasNextPage: skip + take < total,
+      },
     };
   }
 
@@ -193,8 +206,33 @@ export class RemboursementsService {
           },
         });
 
-        // Écritures Intérêts
+        // Écritures Intérêts : 3% crédités au membre, 12% en revenus
         if (partInteret > 0) {
+          // Taux total d'intérêts appliqué (ex: 15)
+          const tauxTotal = Number(credit.tauxInteret) || 15;
+          // Fraction reversée au membre : 3 / tauxTotal
+          const ratioMembre = 3 / tauxTotal;
+          const partMembre = Math.round(partInteret * ratioMembre * 100) / 100;
+          const partRevenus = Math.round((partInteret - partMembre) * 100) / 100;
+
+          // ── 1. Crédit 3% sur le compte collectif du membre ──────────
+          await tx.epargne.create({
+            data: {
+              compte: credit.membre.numeroCompte,
+              typeOperation: 'depot',
+              devise: devise as Devise,
+              montant: new Decimal(partMembre),
+              dateOperation: dateR,
+              description: `Retour intérêts (3%) remb. crédit #${creditId}`,
+              remboursementId: remboursement.id,
+            },
+          });
+
+          this.logger.log(
+            `💰 3% intérêts → membre (${credit.membre.numeroCompte}): +${partMembre} ${devise}`,
+          );
+
+          // ── 2. Revenus 12% : section + global ───────────────────────
           const revType = await tx.revenuType.findFirst({
             where: { nom: 'Système Remboursement' },
           });
@@ -204,7 +242,7 @@ export class RemboursementsService {
               data: {
                 typeCompte: credit.membre.typeCompte,
                 typeRevenuId: revType.id,
-                montant: new Decimal(partInteret),
+                montant: new Decimal(partRevenus),
                 devise: devise as Devise,
                 dateOperation: dateR,
                 sourceCompte: credit.numeroCompte,
@@ -218,9 +256,9 @@ export class RemboursementsService {
                 compte: revSection,
                 typeOperation: 'depot',
                 devise: devise as Devise,
-                montant: new Decimal(partInteret),
+                montant: new Decimal(partRevenus),
                 dateOperation: dateR,
-                description: `Intérêts #${creditId}`,
+                description: `Intérêts (12%) remb. #${creditId}`,
                 remboursementId: remboursement.id,
               },
             });
@@ -230,12 +268,16 @@ export class RemboursementsService {
                 compte: 'MW-REVENUS-GLOBAL',
                 typeOperation: 'depot',
                 devise: devise as Devise,
-                montant: new Decimal(partInteret),
+                montant: new Decimal(partRevenus),
                 dateOperation: dateR,
-                description: `Intérêts #${creditId} global`,
+                description: `Intérêts (12%) remb. #${creditId} global`,
                 remboursementId: remboursement.id,
               },
             });
+
+            this.logger.log(
+              `📈 12% intérêts → revenus section (${revSection}) + global: +${partRevenus} ${devise}`,
+            );
           }
         }
 
@@ -389,7 +431,35 @@ export class RemboursementsService {
   }
 
   private mapToResponse(rembo: any) {
+    const credit = rembo.credit;
+    const membre = credit?.membre;
+
+    const montantCredit = credit ? Number(credit.montant) : 0;
+    const tauxInteret = credit ? Number(credit.tauxInteret) : 15;
+    const montantTotal = montantCredit * (1 + tauxInteret / 100);
+    const montantRembourse = credit ? Number(credit.montantRembourse) : Number(rembo.montant);
+    const soldeRestant = Math.max(0, montantTotal - montantRembourse);
+    const progressPercent = montantTotal > 0
+      ? Math.min(100, Math.round((montantRembourse / montantTotal) * 100))
+      : 0;
+
+    const statusMap: Record<string, string> = {
+      actif: 'active',
+      rembourse: 'completed',
+      en_retard: 'overdue',
+    };
+    const status = statusMap[credit?.statut] ?? 'active';
+
+    const nomComplet = membre?.nomComplet ?? '';
+    const initiales = nomComplet
+      .split(' ')
+      .map((n: string) => n[0] ?? '')
+      .join('')
+      .toUpperCase()
+      .substring(0, 2) || '??';
+
     return {
+      // Champs de base du remboursement
       id: rembo.id,
       creditId: rembo.creditId,
       montant: Number(rembo.montant),
@@ -402,6 +472,21 @@ export class RemboursementsService {
       description: rembo.description,
       createdAt: rembo.createdAt,
       updatedAt: rembo.updatedAt,
+
+      // Champs attendus par le frontend (RepaymentRecord)
+      date: rembo.dateRemboursement,
+      currency: rembo.devise,
+      memberName: nomComplet,
+      memberInitials: initiales,
+      accountId: credit?.numeroCompte ?? membre?.numeroCompte ?? '',
+      initialAmount: montantCredit,
+      interestAmount: montantCredit * (tauxInteret / 100),
+      interestRate: tauxInteret,
+      totalDue: montantTotal,
+      paidAmount: montantRembourse,
+      remainingAmount: soldeRestant,
+      progressPercent,
+      status,
     };
   }
 }

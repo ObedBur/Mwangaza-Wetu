@@ -115,7 +115,7 @@ export default function CreateWithdrawalModal({
 
       // Identifier si c'est le membre ou l'un de ses délégués
       if (String(memberByZk.userId) === String(biometricUserId)) {
-        setIdentifiedPerson({ name: memberByZk.nomComplet, role: "Membre" });
+        setIdentifiedPerson({ name: memberByZk.nomComplet ?? '', role: "Membre" });
       } else if (memberByZk.delegues && memberByZk.delegues.length > 0) {
         const matchingDelegue = memberByZk.delegues.find(
           (d) => String(d.userId) === String(biometricUserId)
@@ -256,14 +256,14 @@ export default function CreateWithdrawalModal({
                 ) : profileData ? (
                   <>
                     <div className="h-12 w-12 rounded-full bg-red-600/10 flex items-center justify-center text-red-600 font-bold text-sm shrink-0">
-                          {profileData.nomComplet.substring(0, 2).toUpperCase()}
+                      {profileData.nomComplet?.substring(0, 2).toUpperCase() ?? '?'}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                            {profileData.nomComplet}
+                        {profileData.nomComplet ?? '—'}
                       </p>
                       <p className="text-xs text-slate-500">
-                            Membre #{profileData.id}
+                        Membre #{profileData.id}
                       </p>
                       <div className="flex items-center gap-1 mt-1 text-xs text-green-600 font-medium">
                         <CheckCircle className="w-2.5 h-2.5" />

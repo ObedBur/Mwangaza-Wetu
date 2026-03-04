@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import { MoreVertical } from "lucide-react";
@@ -26,9 +28,8 @@ export default function RepaymentRow({ repayment }: RepaymentRowProps) {
 
   return (
     <tr
-      className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
-        isOverdue ? "bg-red-50/30 dark:bg-red-900/10" : ""
-      }`}
+      className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${isOverdue ? "bg-red-50/30 dark:bg-red-900/10" : ""
+        }`}
     >
       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
         {formatDate(repayment.date)}
@@ -36,11 +37,10 @@ export default function RepaymentRow({ repayment }: RepaymentRowProps) {
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
           <div
-            className={`h-8 w-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold mr-3 ${
-              isOverdue
+            className={`h-8 w-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold mr-3 ${isOverdue
                 ? "bg-red-100 text-red-700"
                 : "bg-slate-200 text-slate-600"
-            }`}
+              }`}
           >
             {repayment.memberInitials}
           </div>
@@ -65,33 +65,30 @@ export default function RepaymentRow({ repayment }: RepaymentRowProps) {
         <div className="flex items-center justify-center gap-2">
           <div className="w-16 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
             <div
-              className={`h-1.5 rounded-full ${
-                repayment.status === "completed"
+              className={`h-1.5 rounded-full ${repayment.status === "completed"
                   ? "bg-green-500"
                   : isOverdue
                     ? "bg-red-500"
                     : "bg-primary"
-              }`}
+                }`}
               style={{ width: `${repayment.progressPercent}%` }}
             />
           </div>
           <span
-            className={`text-xs font-medium ${
-              isOverdue
+            className={`text-xs font-medium ${isOverdue
                 ? "text-red-600 dark:text-red-400"
                 : "text-slate-600 dark:text-slate-300"
-            }`}
+              }`}
           >
             {repayment.progressPercent}%
           </span>
         </div>
       </td>
       <td
-        className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
-          isOverdue
+        className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${isOverdue
             ? "text-red-600 dark:text-red-400"
             : "text-slate-900 dark:text-slate-200"
-        }`}
+          }`}
       >
         {formatAmount(repayment.remainingAmount, repayment.currency)}
       </td>
@@ -114,12 +111,14 @@ export default function RepaymentRow({ repayment }: RepaymentRowProps) {
   );
 }
 
-function formatDate(iso: string) {
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+function formatDate(iso: string | Date) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   });
 }
 

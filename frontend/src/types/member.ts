@@ -12,7 +12,7 @@ export type StatutMembre = 'actif' | 'inactif';
 export interface MemberRecord {
   id: number;
   numeroCompte: string;
-  nomComplet: string;
+  nomComplet?: string | null;
   dateAdhesion: string;
   telephone: string;
   email?: string | null;

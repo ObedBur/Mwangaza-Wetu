@@ -44,3 +44,44 @@ export const useCreateBalance = () => {
     },
   });
 };
+
+export interface SoldeDashboardData {
+  overview: {
+    totalCaisse: { usd: number; fc: number };
+    totalEpargne: { usd: number; fc: number };
+    totalRetrait: { usd: number; fc: number };
+    totalFrais: { usd: number; fc: number };
+    totalRevenus: { usd: number; fc: number };
+    totalCredits: { usd: number; fc: number };
+  };
+  tresorerie: {
+    fc: { caisse: number; reserve: number; encoursCredits: number; disponible: number };
+    usd: { caisse: number; reserve: number; encoursCredits: number; disponible: number };
+  };
+  byType: Array<{
+    type: string;
+    soldeFC: number;
+    soldeUSD: number;
+    epargneFC: number;
+    epargneUSD: number;
+    retraitFC: number;
+    retraitUSD: number;
+  }>;
+  history: Array<{
+    month: string;
+    depotsUSD: number;
+    retraitsUSD: number;
+    depotsFC: number;
+    retraitsFC: number;
+  }>;
+}
+
+export const useSoldeDashboard = () => {
+  return useQuery<SoldeDashboardData>({
+    queryKey: ['soldeDashboard'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<SoldeDashboardData>(API_ROUTES.SOLDE_DASHBOARD);
+      return data;
+    },
+  });
+};

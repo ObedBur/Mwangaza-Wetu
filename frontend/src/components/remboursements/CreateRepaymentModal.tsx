@@ -99,7 +99,7 @@ export default function CreateRepaymentModal({
       }
 
       if (String(memberByZk.userId) === String(biometricUserId)) {
-        setIdentifiedPerson({ name: memberByZk.nomComplet, role: "Membre" });
+        setIdentifiedPerson({ name: memberByZk.nomComplet ?? '', role: "Membre" });
       } else if (memberByZk.delegues && memberByZk.delegues.length > 0) {
         const matchingDelegue = memberByZk.delegues.find(
           (d) => String(d.userId) === String(biometricUserId)
@@ -210,28 +210,28 @@ export default function CreateRepaymentModal({
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     Compte introuvable
                   </div>
-                  ) : profileData ? (
-                    <>
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                        {profileData.nomComplet.substring(0, 2).toUpperCase()}
-                      </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                            {profileData.nomComplet}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            Membre #{profileData.id}
-                          </p>
-                          <div className="flex items-center gap-1 mt-1 text-xs text-primary font-medium">
-                            <CheckCircle className="w-3 h-3" />
-                            <span>Compte Vérifié</span>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-xs text-slate-400 italic">
-                        Saisissez un numéro de compte pour identifier le membre
+                ) : profileData ? (
+                  <>
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                      {profileData.nomComplet?.substring(0, 2).toUpperCase() ?? '?'}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        {profileData.nomComplet ?? '—'}
                       </p>
+                      <p className="text-xs text-slate-500">
+                        Membre #{profileData.id}
+                      </p>
+                      <div className="flex items-center gap-1 mt-1 text-xs text-primary font-medium">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>Compte Vérifié</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">
+                    Saisissez un numéro de compte pour identifier le membre
+                  </p>
                 )}
               </div>
             </div>
@@ -322,20 +322,20 @@ export default function CreateRepaymentModal({
                                 {activeCredit.statut}
                               </span>
                             </div>
-                              <div className="flex justify-between text-xs text-slate-500 mt-2">
-                                <span>Total: <b className="text-slate-700 dark:text-slate-300">{activeCredit.montant} {activeCredit.devise}</b></span>
-                                <span>Reste: <b className="text-primary">{activeCredit.remainingAmount} {activeCredit.devise}</b></span>
-                              </div>
+                            <div className="flex justify-between text-xs text-slate-500 mt-2">
+                              <span>Total: <b className="text-slate-700 dark:text-slate-300">{activeCredit.montant} {activeCredit.devise}</b></span>
+                              <span>Reste: <b className="text-primary">{activeCredit.remainingAmount} {activeCredit.devise}</b></span>
                             </div>
-                          ) : compte?.length >= 5 ? (
-                            <div className="flex items-center gap-2 text-slate-500">
-                              <AlertCircle className="w-4 h-4 text-orange-500" />
-                              <span>Aucun crédit actif trouvé</span>
-                            </div>
-                            ) : (
-                              <div className="text-slate-400 italic">
-                                En attente du compte...
-                              </div>
+                          </div>
+                        ) : compte?.length >= 5 ? (
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <AlertCircle className="w-4 h-4 text-orange-500" />
+                            <span>Aucun crédit actif trouvé</span>
+                          </div>
+                        ) : (
+                          <div className="text-slate-400 italic">
+                            En attente du compte...
+                          </div>
                         )}
                       </div>
                       {/* Hidden field for form submission */}

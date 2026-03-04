@@ -191,13 +191,16 @@ export const useActiveCreditByAccount = (numeroCompte?: string) => {
         const activeCredit = data.find((c) => c.statut === 'actif' || c.statut === 'en_retard');
         if (!activeCredit) return null;
 
-        // Calculer le montant restant
-        const remainingAmount = Number(activeCredit.montant) -
-          (activeCredit.remboursements?.reduce((sum: number, r: any) => sum + Number(r.montant), 0) ?? 0);
+        // Calculer le montant restant (Capital + 15% Intérêt - Déjà payé)
+        const principal = Number(activeCredit.montant);
+        const taux = Number(activeCredit.tauxInteret) || 15;
+        const totalA_Payer = principal * (1 + taux / 100);
+        const dejaPaye = Number(activeCredit.montantRembourse) || 0;
+        const remainingAmount = Math.max(0, totalA_Payer - dejaPaye);
 
         return {
           ...activeCredit,
-          remainingAmount
+          remainingAmount: Math.round(remainingAmount * 100) / 100
         };
       } catch (error) {
         console.error('Erreur lors de la récupération du crédit actif:', error);
