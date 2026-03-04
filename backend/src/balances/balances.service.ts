@@ -125,7 +125,20 @@ export class BalancesService {
     });
 
     const comptes = membres.map((m) => m.numeroCompte);
-    if (comptes.length === 0) return { soldeFC: 0, soldeUSD: 0 };
+    if (comptes.length === 0) {
+      return {
+        soldeFC: 0,
+        soldeUSD: 0,
+        epargneFC: 0,
+        epargneUSD: 0,
+        retraitFC: 0,
+        retraitUSD: 0,
+        creditFC: 0,
+        creditUSD: 0,
+        remboursementFC: 0,
+        remboursementUSD: 0,
+      };
+    }
 
     const epargneStats = await this.prisma.epargne.groupBy({
       by: ['devise', 'typeOperation'],
