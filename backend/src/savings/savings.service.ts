@@ -119,36 +119,48 @@ export class SavingsService {
   }
 
   async getTotalsAll() {
+    const excludeSystem = [
+      { compte: { contains: 'REVENUS' } },
+      { compte: { contains: 'SECTION-0000' } },
+      { compte: { contains: 'CREDITS' } },
+      { compte: { contains: 'TRESORERIE' } },
+    ];
+
     const sumDepots = await this.prisma.epargne.groupBy({
       by: ['devise'],
-      where: { typeOperation: 'depot' },
+      where: {
+        typeOperation: 'depot',
+        NOT: excludeSystem
+      },
       _sum: { montant: true },
     });
 
     const sumRetraits = await this.prisma.epargne.groupBy({
       by: ['devise'],
-      where: { typeOperation: 'retrait' },
+      where: {
+        typeOperation: 'retrait',
+        NOT: excludeSystem
+      },
       _sum: { montant: true },
     });
 
     const sumFrais = await this.prisma.retrait.groupBy({
       by: ['devise'],
+      where: {
+        NOT: excludeSystem
+      },
       _sum: { frais: true },
     });
 
     return {
-      FC: {
-        solde:
-          this.getSumFromGrouped(sumDepots, 'FC') -
-          this.getSumFromGrouped(sumRetraits, 'FC') -
-          this.getSumFromGrouped(sumFrais, 'FC', 'frais'),
-      },
-      USD: {
-        solde:
-          this.getSumFromGrouped(sumDepots, 'USD') -
-          this.getSumFromGrouped(sumRetraits, 'USD') -
-          this.getSumFromGrouped(sumFrais, 'USD', 'frais'),
-      },
+      totalFC:
+        this.getSumFromGrouped(sumDepots, 'FC') -
+        this.getSumFromGrouped(sumRetraits, 'FC') -
+        this.getSumFromGrouped(sumFrais, 'FC', 'frais'),
+      totalUSD:
+        this.getSumFromGrouped(sumDepots, 'USD') -
+        this.getSumFromGrouped(sumRetraits, 'USD') -
+        this.getSumFromGrouped(sumFrais, 'USD', 'frais'),
     };
   }
 

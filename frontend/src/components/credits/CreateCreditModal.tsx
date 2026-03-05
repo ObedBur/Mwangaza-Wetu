@@ -109,9 +109,9 @@ export default function CreateCreditModal({
     const t = tauxInteret || 0;
     const d = duree || 1;
 
-    const totalInterest = (m * t * d) / 100 / 12;
+    const totalInterest = (m * t) / 100;
     const totalRepayment = m + totalInterest;
-    const monthlyPayment = totalRepayment / d;
+    const monthlyPayment = d > 0 ? totalRepayment / d : 0;
 
     const start = new Date(date);
     const end = new Date(start);

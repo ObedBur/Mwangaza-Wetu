@@ -41,12 +41,12 @@ export default function DepositTableRow({ tx }: { tx: DepositTransaction }) {
             {tx.membre?.photoProfil && !imageError ? (
               <img
                 src={getPhotoUrl(tx.membre.photoProfil)}
-                alt={tx.membre.nomComplet}
+                alt={tx.membre.nomComplet || "Avatar"}
                 className="w-full h-full object-cover"
                 onError={() => setImageError(true)}
               />
             ) : (
-                initials(tx.membre?.nomComplet || "??")
+              initials(tx.membre?.nomComplet || "??")
             )}
           </div>
           <div>
@@ -111,10 +111,19 @@ function formatAmount(n: number) {
 }
 
 function formatDate(iso: string) {
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  if (!iso) return "-";
+  try {
+    const datePart = iso.split("T")[0];
+    const d = new Date(datePart + "T00:00:00");
+
+    if (isNaN(d.getTime())) return "Date Invalide";
+
+    return d.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch (e) {
+    return "Date Invalide";
+  }
 }

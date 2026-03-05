@@ -11,10 +11,6 @@ export interface FetchBalancesParams {
   search?: string;
 }
 
-/**
- * Hook personnalisé pour la gestion des soldes (comptes)
- * Route backend : GET /api/solde
- */
 const fetchBalances = async (params: FetchBalancesParams): Promise<PaginatedResponse<AccountBalance>> => {
   const { data } = await apiClient.get<PaginatedResponse<AccountBalance>>(API_ROUTES.SOLDE, {
     params
@@ -53,6 +49,11 @@ export interface SoldeDashboardData {
     totalFrais: { usd: number; fc: number };
     totalRevenus: { usd: number; fc: number };
     totalCredits: { usd: number; fc: number };
+    totalRemboursements: { usd: number; fc: number };
+    activeMembersCount: number;
+    activeCreditsCount: number;
+    totalMembers: number;
+    totalAccounts: number;
   };
   tresorerie: {
     fc: { caisse: number; reserve: number; encoursCredits: number; disponible: number };
@@ -66,6 +67,10 @@ export interface SoldeDashboardData {
     epargneUSD: number;
     retraitFC: number;
     retraitUSD: number;
+    creditFC: number;
+    creditUSD: number;
+    remboursementFC: number;
+    remboursementUSD: number;
   }>;
   history: Array<{
     month: string;
@@ -73,6 +78,13 @@ export interface SoldeDashboardData {
     retraitsUSD: number;
     depotsFC: number;
     retraitsFC: number;
+  }>;
+  dailyHistory: Array<{
+    date: string;
+    epargne: number;
+    retrait: number;
+    credit: number;
+    remboursement: number;
   }>;
 }
 

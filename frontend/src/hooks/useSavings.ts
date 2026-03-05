@@ -135,3 +135,16 @@ export const useAccountSoldes = (numeroCompte: string, options?: { enabled?: boo
     staleTime: 30000, // 30 seconds
   });
 };
+
+export const useSavingsTotals = () => {
+  return useQuery({
+    queryKey: ['savingsTotals'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ totalFC: number; totalUSD: number }>(
+        `${API_ROUTES.EPARGNES}/totals-all`
+      );
+      return data;
+    },
+    staleTime: 30000,
+  });
+};

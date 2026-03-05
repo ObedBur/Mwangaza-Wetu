@@ -6,6 +6,7 @@ import BalanceStatsSection from "@/components/balance/BalanceStatsSection";
 import TreasurySection from "@/components/balance/TreasurySection";
 import BalancesByTypeSection from "@/components/balance/BalancesByTypeSection";
 import SoldeHistoryChart from "@/components/balance/SoldeHistoryChart";
+import { MwangazaInteractiveChart } from "@/components/balance/MwangazaInteractiveChart";
 import BalanceTable from "@/components/balance/BalanceTable";
 import CreateBalanceModal from "@/components/balance/CreateBalanceModal";
 import { useBalances, useCreateBalance, useSoldeDashboard } from "@/hooks/useBalances";
@@ -46,24 +47,26 @@ export default function BalancePage() {
 
       {dashboard && (
         <>
-          {/* Section 1: Top Stats - Données globales */}
+          {/* Section 1: Top Stats - Données globales du backend */}
           <BalanceStatsSection
-            totalAccounts={accountsResponse?.meta?.total || 0}
+            totalAccounts={dashboard.overview.totalAccounts}
             totalBalanceUSD={dashboard.overview.totalCaisse.usd}
             totalBalanceFC={dashboard.overview.totalCaisse.fc}
-            activeAccounts={dashboard.byType.reduce((sum, t) => sum + t.soldeUSD, 0) > 0 ? 1 : 0} // Placeholder, à affiner si besoin
+            activeMembers={dashboard.overview.activeMembersCount}
+            activeCredits={dashboard.overview.activeCreditsCount}
           />
 
           {/* Section 2: Analyse de la Trésorerie (Disponibilité réelle) */}
           <TreasurySection data={dashboard.tresorerie} />
 
-          {/* Section 3: Graphique et Evolution */}
+          {/* Section 3: Graphiques Interactifs Shadcn - Flux réels */}
           <div className="grid grid-cols-1 gap-8">
+            <MwangazaInteractiveChart data={dashboard.dailyHistory} />
             <SoldeHistoryChart data={dashboard.history} />
           </div>
 
-          {/* Section 4: Répartition par Type de Compte */}
-          <BalancesByTypeSection data={dashboard.byType} />
+          {/* Section 4: Répartition des Flux Globaux */}
+          <BalancesByTypeSection overview={dashboard.overview} />
         </>
       )}
 

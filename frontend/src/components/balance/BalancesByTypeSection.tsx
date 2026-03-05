@@ -1,83 +1,91 @@
 "use client";
 
-import { Users, UserCheck, Briefcase, UserPlus } from "lucide-react";
+import { TrendingUp, TrendingDown, Landmark, Wallet } from "lucide-react";
 
-interface AccountTypeData {
-  type: string;
-  soldeFC: number;
-  soldeUSD: number;
-  epargneFC: number;
-  epargneUSD: number;
-  retraitFC: number;
-  retraitUSD: number;
+interface OverviewData {
+  totalEpargne: { usd: number; fc: number };
+  totalRetrait: { usd: number; fc: number };
+  totalCredits: { usd: number; fc: number };
+  totalRemboursements: { usd: number; fc: number };
 }
 
-export default function BalancesByTypeSection({ data }: { data: AccountTypeData[] }) {
-  const getIcon = (type: string) => {
-    switch (type.toUpperCase()) {
-      case "PRIVILEGE": return <UserCheck className="w-5 h-5 text-purple-500" />;
-      case "ENTREPRISE": return <Briefcase className="w-5 h-5 text-blue-500" />;
-      case "DELERE": return <UserPlus className="w-5 h-5 text-orange-500" />;
-      default: return <Users className="w-5 h-5 text-slate-500" />;
-    }
-  };
+export default function BalancesByTypeSection({ overview }: { overview: OverviewData }) {
+  const format = (val: number) => (val || 0).toLocaleString("fr-FR");
 
-  const getLabel = (type: string) => {
-    switch (type.toUpperCase()) {
-      case "PRIVILEGE": return "Membres Privilège";
-      case "ORDINAIRE": return "Membres Ordinaires";
-      case "DELERE": return "Délégués";
-      case "ENTREPRISE": return "Comptes Entreprise";
-      default: return type;
+  const cards = [
+    {
+      title: "Épargnes Totales",
+      usd: overview.totalEpargne.usd,
+      fc: overview.totalEpargne.fc,
+      icon: <TrendingUp className="w-6 h-6 text-sky-600 dark:text-sky-400" />,
+      color: "sky",
+      label: "Flux entrant"
+    },
+    {
+      title: "Retraits Totaux",
+      usd: overview.totalRetrait.usd,
+      fc: overview.totalRetrait.fc,
+      icon: <TrendingDown className="w-6 h-6 text-rose-600 dark:text-rose-400" />,
+      color: "rose",
+      label: "Flux sortant"
+    },
+    {
+      title: "Crédits Octroyés",
+      usd: overview.totalCredits.usd,
+      fc: overview.totalCredits.fc,
+      icon: <Landmark className="w-6 h-6 text-amber-600 dark:text-amber-400" />,
+      color: "amber",
+      label: "Encours"
+    },
+    {
+      title: "Remboursements",
+      usd: overview.totalRemboursements.usd,
+      fc: overview.totalRemboursements.fc,
+      icon: <Wallet className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />,
+      color: "emerald",
+      label: "Recouvrement"
     }
-  };
+  ];
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-        <Users className="w-5 h-5 text-primary" />
-        Répartition par Type de Compte
-      </h2>
+    <div className="space-y-8 py-4">
+      <div className="flex items-center gap-3">
+        <div className="h-1 w-12 bg-primary rounded-full" />
+        <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+          Analyse des flux financiers globaux
+        </h2>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        {data.map((item) => (
-          <div key={item.type} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                {getIcon(item.type)}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {cards.map((card, idx) => (
+          <div
+            key={idx}
+            className="group relative bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-2xl transition-all duration-500"
+          >
+            <div className="flex items-center justify-between mb-8">
+              <div className={`p-4 rounded-2xl bg-${card.color}-50 dark:bg-${card.color}-900/10 border border-${card.color}-100 dark:border-${card.color}-900/20 group-hover:scale-110 transition-transform duration-500`}>
+                {card.icon}
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight">
-                  {getLabel(item.type)}
-                </h3>
-                <p className="text-[10px] text-slate-400 font-medium tracking-widest">SOUS-TOTAL DÉTE(NU)</p>
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest block">{card.label}</span>
+                <span className="text-xs font-bold text-slate-900 dark:text-white">{card.title}</span>
               </div>
             </div>
 
-            <div className="space-y-3 pt-2">
-              <div className="flex justify-between items-end bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
-                <span className="text-[11px] font-bold text-slate-500">SOLDE USD</span>
-                <span className="text-lg font-black text-slate-900 dark:text-white line-clamp-1">
-                  ${(item.soldeUSD ?? 0).toLocaleString("fr-FR")}
-                </span>
-              </div>
-              <div className="flex justify-between items-end bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
-                <span className="text-[11px] font-bold text-slate-500">SOLDE FC</span>
-                <span className="text-lg font-black text-slate-900 dark:text-white line-clamp-1">
-                  {(item.soldeFC ?? 0).toLocaleString("fr-FR")} ₣
-                </span>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2 text-[10px] uppercase font-bold text-slate-400">
-                <div className="flex flex-col">
-                    <span>Épargne USD</span>
-                <span className="text-slate-600 dark:text-slate-400">${(item.epargneUSD ?? 0).toLocaleString()}</span>
+            <div className="space-y-4">
+              <div className={`p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50 group-hover:bg-white dark:hover:bg-slate-800 transition-colors shadow-sm`}>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Montant USD</p>
+                <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">
+                  ${format(card.usd)}
                 </div>
-                <div className="flex flex-col text-right">
-                    <span>Retrait USD</span>
-                <span className="text-red-500">${(item.retraitUSD ?? 0).toLocaleString()}</span>
+              </div>
+
+              <div className={`p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-700/50 group-hover:bg-white dark:hover:bg-slate-800 transition-colors shadow-sm`}>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Montant FC</p>
+                <div className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">
+                  {format(card.fc)} <span className="text-[10px] font-bold text-slate-400 ml-1">FC</span>
                 </div>
+              </div>
             </div>
           </div>
         ))}

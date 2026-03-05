@@ -1,31 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import DepositsHeader from "@/components/epargne/DepositsHeader";
 import DepositsStatsSection from "@/components/epargne/DepositsStatsSection";
 import DepositsTable from "@/components/epargne/DepositsTable";
 import CreateDepositModal from "@/components/epargne/CreateDepositModal";
-import { useSavings, useCreateSavings } from "@/hooks/useSavings";
+import { useSavings, useCreateSavings, useSavingsTotals } from "@/hooks/useSavings";
 import { SavingsInput } from "@/lib/validations";
 import { toast } from "sonner";
 
 export default function EpargnePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { data: response, isLoading, dataUpdatedAt } = useSavings();
+  const { data: response, isLoading: isListLoading, dataUpdatedAt } = useSavings();
+  const { data: totalsData, isLoading: isTotalsLoading } = useSavingsTotals();
+
   const transactions = response?.data ?? [];
   const meta = response?.meta;
   const { mutateAsync: createSavings } = useCreateSavings();
-
-  const totals = useMemo(() => {
-    const totalFC = transactions
-      .filter((t: any) => t.devise === "FC")
-      .reduce((sum: number, t: any) => sum + t.montant, 0);
-    const totalUSD = transactions
-      .filter((t: any) => t.devise === "USD")
-      .reduce((sum: number, t: any) => sum + t.montant, 0);
-
-    return { totalFC, totalUSD };
-  }, [transactions]);
 
   const handleCreateDeposit = async (data: SavingsInput) => {
     const toastId = toast.loading("Enregistrement du dépôt...");
@@ -43,11 +34,11 @@ export default function EpargnePage() {
     <div className="space-y-6">
       <DepositsHeader onCreateClick={() => setIsModalOpen(true)} transactions={transactions} />
       <DepositsStatsSection
-        totalFC={totals.totalFC}
-        totalUSD={totals.totalUSD}
+        totalFC={totalsData?.totalFC ?? 0}
+        totalUSD={totalsData?.totalUSD ?? 0}
         totalTransactions={meta?.total}
         lastUpdatedAt={dataUpdatedAt ? new Date(dataUpdatedAt).toISOString() : null}
-        isLoading={isLoading}
+        isLoading={isTotalsLoading || isListLoading}
       />
 
       <div>

@@ -64,24 +64,30 @@ export default function BalanceStatCard({
 
   return (
     <div
-      className={`bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between h-full group ${colors.border} transition-all`}
+      className={`relative overflow-hidden bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between h-full group hover:shadow-xl hover:-translate-y-1 transition-all duration-300`}
     >
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-2 rounded-lg ${colors.bg} ${colors.text}`}>
-          <Icon className="w-5 h-5" />
+      {/* Decorative background gradient */}
+      <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 blur-2xl ${colors.bg}`} />
+      
+      <div className="flex justify-between items-start mb-6 relative z-10">
+        <div className={`p-3 rounded-xl ${colors.bg} ${colors.text} shadow-inner transition-transform group-hover:scale-110 duration-300`}>
+          <Icon className="w-6 h-6" />
         </div>
-        <span className="flex items-center text-xs font-bold px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-          <TrendingUp className="w-3 h-3 mr-1" />
+        <div className="flex items-center text-[10px] font-bold px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 uppercase tracking-wider">
           {trend}
-        </span>
+        </div>
       </div>
-      <div>
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
+
+      <div className="relative z-10">
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 group-hover:text-slate-500 transition-colors">
           {title}
         </p>
-        <h3 className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white">
-          {value}
-        </h3>
+        <div className="flex items-baseline gap-1">
+          <h3 className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            {value}
+          </h3>
+          <div className={`w-1.5 h-1.5 rounded-full ${colors.bg.replace('bg-', 'bg-').split(' ')[0]} animate-pulse`} />
+        </div>
       </div>
     </div>
   );

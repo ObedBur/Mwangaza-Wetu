@@ -6,6 +6,11 @@ import { ParseIntPipe } from '@nestjs/common';
 export class BalancesController {
   constructor(private readonly balancesService: BalancesService) { }
 
+  @Get()
+  async findAll(@Query() query: any) {
+    return this.balancesService.findAll(query);
+  }
+
   @Get('total')
   async getTotal() {
     return this.balancesService.getTotal();
