@@ -131,7 +131,7 @@ async function main() {
     // --- INITIALISATION DES TYPES DE REVENUS ---
     console.log('🔄 Initialisation des types de revenus...');
     const revenueTypes = [
-        { nom: 'Système Épargne', description: 'Revenus issus des adhésions et dépôts courants' },
+        { nom: 'Système Membre', description: 'Revenus issus des frais d\'adhésion et de gestion des membres' },
         { nom: 'Système Retrait', description: 'Revenus issus des frais de retrait' },
         { nom: 'Système Crédit', description: 'Revenus issus des frais d\'octroi de crédit' },
         { nom: 'Système Remboursement', description: 'Revenus issus des intérêts sur remboursements' },

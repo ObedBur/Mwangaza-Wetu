@@ -5,6 +5,7 @@ import BalanceHeader from "@/components/balance/BalanceHeader";
 import BalanceStatsSection from "@/components/balance/BalanceStatsSection";
 import TreasurySection from "@/components/balance/TreasurySection";
 import BalancesByTypeSection from "@/components/balance/BalancesByTypeSection";
+import RevenueDetailsSection from "@/components/balance/RevenueDetailsSection";
 import SoldeHistoryChart from "@/components/balance/SoldeHistoryChart";
 import { MwangazaInteractiveChart } from "@/components/balance/MwangazaInteractiveChart";
 import BalanceTable from "@/components/balance/BalanceTable";
@@ -67,6 +68,13 @@ export default function BalancePage() {
 
           {/* Section 4: Répartition des Flux Globaux */}
           <BalancesByTypeSection overview={dashboard.overview} />
+
+          {/* Section 5: Détail analytique des revenus */}
+          <RevenueDetailsSection 
+            revenusDetails={dashboard.revenusDetails} 
+            totalFC={dashboard.overview.totalRevenus.fc}
+            totalUSD={dashboard.overview.totalRevenus.usd}
+          />
         </>
       )}
 

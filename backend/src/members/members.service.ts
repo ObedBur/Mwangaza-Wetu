@@ -234,7 +234,7 @@ export class MembersService {
 
       // Enregistrer le revenu d'Adhésion (2000 FC) dans la table Revenu
       const revType = await tx.revenuType.findFirst({
-        where: { nom: 'Système Épargne' },
+        where: { nom: 'Système Membre' },
       });
 
       if (revType) {
@@ -574,5 +574,106 @@ export class MembersService {
     if (delegue) return { exists: true, where: 'délégué' };
 
     return { exists: false, where: null };
+  }
+
+  async getMemberDashboard(identifier: string) {
+    // Identifier can be an ID (number) or Account Number (string)
+    const isId = !isNaN(Number(identifier));
+    
+    const whereClause = isId 
+      ? { id: Number(identifier) }
+      : { numeroCompte: identifier };
+
+    const membre = await this.prisma.membre.findUnique({
+      where: whereClause,
+      include: {
+        delegues: true,
+        epargnes: {
+          orderBy: { dateOperation: 'desc' },
+        },
+        retraits: {
+          orderBy: { dateOperation: 'desc' },
+        },
+        credits: {
+          include: {
+            remboursements: {
+              orderBy: { dateRemboursement: 'desc' }
+            }
+          },
+          orderBy: { dateDebut: 'desc' },
+        }
+      }
+    });
+
+    if (!membre) throw new NotFoundException('Membre non trouvé');
+
+    // Mettre à plat et trier les transactions récentes interactives
+    const allTransactions = [
+      ...membre.epargnes.map(e => ({ type: 'depot', devise: e.devise, montant: Number(e.montant), date: e.dateOperation, description: e.description })),
+      ...membre.retraits.map(r => ({ type: 'retrait', devise: r.devise, montant: Number(r.montantRetire), date: r.dateOperation, description: r.description })),
+      ...membre.credits.flatMap(c => c.remboursements.map(r => ({ type: 'remboursement', devise: r.devise, montant: Number(r.montant), date: r.dateRemboursement, description: r.description })))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Calculs de l'épargne (dépôts - retraits)
+    const epargneUSD = 
+      membre.epargnes.filter(e => e.devise === Devise.USD).reduce((sum, e) => sum + Number(e.montant), 0) -
+      membre.retraits.filter(r => r.devise === Devise.USD).reduce((sum, r) => sum + Number(r.montantRetire), 0);
+
+    const epargneFC = 
+      membre.epargnes.filter(e => e.devise === Devise.FC).reduce((sum, e) => sum + Number(e.montant), 0) -
+      membre.retraits.filter(r => r.devise === Devise.FC).reduce((sum, r) => sum + Number(r.montantRetire), 0);
+
+    // Filter active credits
+    const activeCredits = membre.credits.filter(c => c.statut === PrismaStatutMembre.actif || c.statut === 'en_retard');
+
+    const unpaidCreditsUSD = activeCredits
+      .filter(c => c.devise === Devise.USD)
+      .reduce((sum, c) => sum + (Number(c.montant) * (1 + Number(c.tauxInteret) / 100) - Number(c.montantRembourse)), 0);
+
+    const unpaidCreditsFC = activeCredits
+      .filter(c => c.devise === Devise.FC)
+      .reduce((sum, c) => sum + (Number(c.montant) * (1 + Number(c.tauxInteret) / 100) - Number(c.montantRembourse)), 0);
+
+    // Format Credits Details for the UI
+    const creditsDetails = activeCredits.map(c => {
+      const montantTotal = Number(c.montant) * (1 + Number(c.tauxInteret) / 100);
+      const rembourse = Number(c.montantRembourse);
+      return {
+        id: c.id,
+        montantInitial: Number(c.montant),
+        montantTotal: montantTotal,
+        montantRembourse: rembourse,
+        restant: Math.max(0, montantTotal - rembourse),
+        tauxInteret: Number(c.tauxInteret),
+        devise: c.devise,
+        dateDebut: c.dateDebut,
+        statut: c.statut,
+        progression: montantTotal > 0 ? (rembourse / montantTotal) * 100 : 0
+      };
+    });
+
+    return {
+      profile: {
+        id: membre.id,
+        numeroCompte: membre.numeroCompte,
+        nomComplet: membre.nomComplet,
+        typeCompte: membre.typeCompte,
+        statut: membre.statut,
+        dateAdhesion: membre.dateAdhesion,
+        photoProfil: membre.photoProfil
+      },
+      balances: {
+        savings: {
+          USD: epargneUSD,
+          FC: epargneFC
+        },
+        activeCredits: {
+          USD: unpaidCreditsUSD,
+          FC: unpaidCreditsFC
+        }
+      },
+      activeCreditsDetails: creditsDetails,
+      recentTransactions: allTransactions.slice(0, 15) // Only last 15 for dashboard performance
+    };
   }
 }

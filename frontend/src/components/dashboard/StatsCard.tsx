@@ -19,9 +19,11 @@ export default function StatsCard({
   isHighlight,
 }: StatsCardProps) {
   return (
-    <div className="glossy-card custom-shadow p-4 sm:p-5 rounded-lg sm:rounded-xl border border-white/20 dark:border-slate-700 hover:shadow-lg transition-all transform hover:scale-105 cursor-pointer">
-      <div className="flex justify-between items-start mb-3 sm:mb-4">
-        <Icon className="w-5 sm:w-6 h-5 sm:h-6 text-primary p-1.5 sm:p-2 bg-primary/10 rounded-lg flex-shrink-0" />
+    <div className="glossy-card p-5 sm:p-6 border-t border-white/60 dark:border-white/5 cursor-pointer hover:border-primary/30 group">
+      <div className="flex justify-between items-start mb-4">
+        <div className="p-2.5 bg-primary/10 dark:bg-primary/20 rounded-xl group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+          <Icon className="w-5 sm:w-6 h-5 sm:h-6 text-primary group-hover:text-white transition-colors duration-300" />
+        </div>
         {tooltip && (
           <button
             className="text-slate-400 hover:text-primary transition-colors flex-shrink-0"

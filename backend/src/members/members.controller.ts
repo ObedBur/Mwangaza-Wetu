@@ -93,6 +93,11 @@ export class MembersController {
     return this.membersService.findByNumero(numero);
   }
 
+  @Get('dashboard/:identifier')
+  async getMemberDashboard(@Param('identifier') identifier: string) {
+    return this.membersService.getMemberDashboard(identifier);
+  }
+
   @Post()
   async create(@Body() createMemberDto: CreateMemberDto) {
     return this.membersService.create(createMemberDto);

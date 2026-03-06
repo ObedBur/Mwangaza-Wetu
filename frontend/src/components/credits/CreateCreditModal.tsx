@@ -419,10 +419,14 @@ export default function CreateCreditModal({
                         Mensualité estimée
                       </span>
                       <span className="block mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        {new Intl.NumberFormat("fr-FR", {
-                          style: "currency",
-                          currency: devise || "USD",
-                        }).format(calculations.monthlyPayment)}{" "}
+                        {devise === "FC" ? (
+                          `${new Intl.NumberFormat("fr-FR", { style: "decimal" }).format(calculations.monthlyPayment)} FC`
+                        ) : (
+                          new Intl.NumberFormat("fr-FR", {
+                            style: "currency",
+                            currency: devise || "USD",
+                          }).format(calculations.monthlyPayment)
+                        )}{" "}
                         / mois
                       </span>
                     </div>
@@ -435,10 +439,14 @@ export default function CreateCreditModal({
                     </label>
                     <div className="bg-white dark:bg-slate-800 border border-primary/30 rounded-lg px-4 py-3 flex justify-between items-center shadow-sm">
                       <span className="text-2xl font-bold text-primary">
-                        {new Intl.NumberFormat("fr-FR", {
-                          style: "currency",
-                          currency: devise || "USD",
-                        }).format(calculations.totalRepayment)}
+                        {devise === "FC" ? (
+                          `${new Intl.NumberFormat("fr-FR", { style: "decimal" }).format(calculations.totalRepayment)} FC`
+                        ) : (
+                          new Intl.NumberFormat("fr-FR", {
+                            style: "currency",
+                            currency: devise || "USD",
+                          }).format(calculations.totalRepayment)
+                        )}
                       </span>
                       <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded">
                         {devise}

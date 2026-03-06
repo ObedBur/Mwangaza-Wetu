@@ -52,6 +52,7 @@ export interface SoldeDashboardData {
     totalRemboursements: { usd: number; fc: number };
     activeMembersCount: number;
     activeCreditsCount: number;
+    overdueCreditsCount: number;
     totalMembers: number;
     totalAccounts: number;
   };
@@ -59,6 +60,13 @@ export interface SoldeDashboardData {
     fc: { caisse: number; reserve: number; encoursCredits: number; disponible: number };
     usd: { caisse: number; reserve: number; encoursCredits: number; disponible: number };
   };
+  revenusDetails: Array<{
+    id: number;
+    nom: string;
+    description: string;
+    totalFC: number;
+    totalUSD: number;
+  }>;
   byType: Array<{
     type: string;
     soldeFC: number;

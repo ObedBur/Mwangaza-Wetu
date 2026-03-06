@@ -33,9 +33,12 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-full md:w-64 bg-slate-900 text-slate-300 shrink-0 flex flex-col h-auto md:h-screen sticky top-0 z-40">
-      <div className="p-6 flex items-center gap-3 border-b border-slate-800">
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+    <aside className="w-full md:w-64 bg-slate-950/95 backdrop-blur-2xl text-slate-300 shrink-0 flex flex-col h-auto md:h-screen sticky top-0 z-40 border-r border-white/10 shadow-2xl">
+      <div className="p-6 flex items-center gap-3 border-b border-white/5 relative overflow-hidden">
+        {/* Decorative background glow */}
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary/20 to-transparent opacity-50 pointer-events-none" />
+        
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-[0_0_20px_rgba(30,59,138,0.4)] relative z-10">
           <LayoutDashboard className="w-6 h-6 text-white" />
         </div>
         <div>
@@ -57,18 +60,21 @@ export default function Sidebar() {
             <Link
               key={item.label}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 group relative overflow-hidden ${
                 isActive
-                  ? "bg-primary text-white shadow-md shadow-primary/20"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  ? "bg-primary/90 text-white shadow-lg shadow-primary/25 translate-x-1"
+                  : "text-slate-400 hover:text-white hover:bg-white/5 hover:translate-x-1"
               }`}
             >
-              <Icon
-                className={`w-5 h-5 shrink-0 ${isActive ? "text-white" : "text-slate-500 group-hover:text-slate-300"}`}
-              />
-              <span className="truncate">{item.label}</span>
               {isActive && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white opacity-50" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-white rounded-r-full" />
+              )}
+              <Icon
+                className={`w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110 ${isActive ? "text-white" : "text-slate-500 group-hover:text-slate-300"}`}
+              />
+              <span className="truncate flex-1 tracking-wide">{item.label}</span>
+              {isActive && (
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_white]" />
               )}
             </Link>
           );

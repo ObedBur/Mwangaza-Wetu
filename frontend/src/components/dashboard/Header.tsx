@@ -17,11 +17,11 @@ export default function Header() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
-    <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50 shadow-md">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+    <header className="glass-panel sticky top-4 z-50 rounded-2xl mx-4 my-4 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+      <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 flex flex-wrap items-center justify-between gap-3 sm:gap-4 relative z-10">
         {/* Logo Section */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="bg-primary p-1.5 sm:p-2 rounded-lg text-white shrink-0">
+          <div className="bg-gradient-to-br from-primary to-blue-600 p-2 rounded-xl text-white shadow-lg shadow-primary/30 shrink-0 transform transition-transform hover:scale-105">
             <svg
               className="w-5 h-5 sm:w-6 sm:h-6"
               fill="currentColor"

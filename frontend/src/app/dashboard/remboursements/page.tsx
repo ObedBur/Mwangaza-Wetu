@@ -6,6 +6,7 @@ import RemboursementsStatsSection from "@/components/remboursements/Remboursemen
 import RemboursementsTable from "@/components/remboursements/RemboursementsTable";
 import CreateRepaymentModal from "@/components/remboursements/CreateRepaymentModal";
 import { useRepayments, useCreateRepayment } from "@/hooks/useRepayments";
+import { useSoldeDashboard } from "@/hooks/useBalances";
 import { RepaymentInput } from "@/lib/validations";
 
 export default function RemboursementsPage() {
@@ -13,22 +14,16 @@ export default function RemboursementsPage() {
   const { data: response } = useRepayments();
   const repayments = response?.data ?? [];
   const { mutateAsync: createRepayment } = useCreateRepayment();
+  const { data: dashboard } = useSoldeDashboard();
 
   const stats = useMemo(() => {
-    const list = repayments;
-    const activeCount = list.filter((r) => r.status === "active").length;
-
-    // In a real app, these totals would likely come from the API/hook
-    const totalRepaidFC = list
-      .filter((r) => r.currency === "FC")
-      .reduce((sum, r) => sum + r.paidAmount, 0);
-    const totalRepaidUSD = list
-      .filter((r) => r.currency === "USD")
-      .reduce((sum, r) => sum + r.paidAmount, 0);
-    const overdueCount = list.filter((r) => r.status === "overdue").length;
-
-    return { activeCount, totalRepaidFC, totalRepaidUSD, overdueCount };
-  }, [repayments]);
+    return { 
+      activeCount: dashboard?.overview.activeCreditsCount ?? 0, 
+      totalRepaidFC: dashboard?.overview.totalRemboursements.fc ?? 0, 
+      totalRepaidUSD: dashboard?.overview.totalRemboursements.usd ?? 0, 
+      overdueCount: dashboard?.overview.overdueCreditsCount ?? 0,
+    };
+  }, [dashboard]);
 
   const handleCreateRepayment = async (data: RepaymentInput) => {
     try {

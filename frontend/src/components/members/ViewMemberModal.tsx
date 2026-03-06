@@ -82,7 +82,7 @@ export default function ViewMemberModal({
           ) : (
             <>
               {/* Header Profile Banner */}
-              <div className="relative h-32 sm:h-40 bg-gradient-to-r from-primary to-blue-400">
+                  <div className="relative shrink-0 h-32 sm:h-40 bg-gradient-to-r from-primary to-blue-400">
                 <button
                   onClick={onClose}
                   className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full text-white transition-all active:scale-95 z-10"
@@ -95,7 +95,7 @@ export default function ViewMemberModal({
               </div>
 
               {/* Main Content Area */}
-              <div className="relative px-6 sm:px-8 pb-8 pt-0 flex-1 overflow-y-auto custom-scrollbar">
+                  <div className="relative z-10 px-6 sm:px-8 pb-8 pt-0 flex-1 overflow-y-auto custom-scrollbar">
                 
                 {/* Avatar & Main Info Row */}
                 <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6 -mt-16 sm:-mt-20 relative z-10 mb-8">
@@ -104,11 +104,11 @@ export default function ViewMemberModal({
                     {member.photoProfil ? (
                       <img 
                         src={getPhotoUrl(member.photoProfil) as string} 
-                        alt={member.nomComplet} 
+                            alt={member.nomComplet || "Avatar"} 
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
                       />
                     ) : (
-                      <span className="text-4xl font-black text-slate-300 dark:text-slate-600">{getInitials(member.nomComplet)}</span>
+                            <span className="text-4xl font-black text-slate-300 dark:text-slate-600">{getInitials(member.nomComplet || "")}</span>
                     )}
                   </div>
 
@@ -206,9 +206,9 @@ export default function ViewMemberModal({
                           <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Biométrie</span>
                         </div>
                         {member.userId ? (
-                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-xs font-bold uppercase tracking-wider">Configurée (ID: {member.userId})</span>
+                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-[10px] sm:text-xs font-bold uppercase tracking-wider">Configurée (ID: {member.userId})</span>
                         ) : (
-                          <span className="px-2 py-0.5 bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400 rounded text-xs font-bold uppercase tracking-wider">Non Configurée</span>
+                                <span className="px-2 py-0.5 bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400 rounded text-[10px] sm:text-xs font-bold uppercase tracking-wider">Non Configurée</span>
                         )}
                       </div>
                     </div>

@@ -47,11 +47,13 @@ export default function QuickLinksSection() {
           return (
             <a
               key={link.label}
-              className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary hover:shadow-lg transition-all text-center group"
+              className="glossy-card group flex flex-col items-center justify-center p-4 sm:p-5 text-center border-t border-white/60 dark:border-white/5 hover:border-primary/50 hover:shadow-[0_0_25px_rgba(30,59,138,0.15)] dark:hover:shadow-[0_0_25px_rgba(30,59,138,0.3)] transition-all duration-300"
               href={link.href}
             >
-              <Icon className="w-6 sm:w-8 h-6 sm:h-8 text-primary mb-1 sm:mb-2 group-hover:scale-110 transition-transform" />
-              <span className="text-[10px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 text-center line-clamp-2">
+              <div className="bg-primary/5 dark:bg-primary/20 p-2.5 sm:p-3 rounded-xl mb-3 group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+                <Icon className="w-6 sm:w-7 h-6 sm:h-7 text-primary group-hover:text-white transition-colors duration-300" />
+              </div>
+              <span className="text-[10px] sm:text-xs font-bold text-slate-700 dark:text-slate-200 text-center line-clamp-2 group-hover:text-primary dark:group-hover:text-primary-300 transition-colors">
                 {link.label}
               </span>
             </a>

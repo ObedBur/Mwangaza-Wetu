@@ -364,6 +364,26 @@ export class BalancesService {
     // Evolution quotidienne (90 derniers jours) pour le graphique interactif
     const dailyHistory = await this.getDailyHistory();
 
+    // Détail des revenus
+    const revenusData = await this.prisma.revenu.groupBy({
+      by: ['typeRevenuId', 'devise'],
+      _sum: { montant: true },
+    });
+
+    const typesRevenu = await this.prisma.revenuType.findMany();
+
+    const revenusDetails = typesRevenu.map((tr) => {
+      const fc = revenusData.find(r => r.typeRevenuId === tr.id && r.devise === 'FC')?._sum.montant || 0;
+      const usd = revenusData.find(r => r.typeRevenuId === tr.id && r.devise === 'USD')?._sum.montant || 0;
+      return {
+        id: tr.id,
+        nom: tr.nom,
+        description: tr.description,
+        totalFC: Number(fc),
+        totalUSD: Number(usd),
+      };
+    });
+
     return {
       overview: {
         totalCaisse: { usd: total.usd.solde, fc: total.fc.solde },
@@ -373,11 +393,47 @@ export class BalancesService {
         totalRevenus: { usd: total.usd.benefices, fc: total.fc.benefices },
         totalCredits: { usd: total.usd.credit, fc: total.fc.credit },
         totalRemboursements: { usd: total.usd.remboursement, fc: total.fc.remboursement },
-        activeMembersCount: await this.prisma.membre.count({ where: { statut: 'actif' } }),
+        activeMembersCount: await this.prisma.membre.count({ 
+          where: { 
+            statut: 'actif',
+            NOT: {
+               OR: [
+                 { typeCompte: 'SYSTEME' },
+                 { nomComplet: { contains: 'Compte Collectif' } },
+                 { nomComplet: { contains: 'REVENUS' } },
+                 { nomComplet: { contains: 'CRÉDITS' } },
+               ]
+            }
+          } 
+        }),
         activeCreditsCount: await this.prisma.credit.count({ where: { statut: 'actif' } }),
-        totalMembers: await this.prisma.membre.count(),
-        totalAccounts: await this.prisma.compteEpargne.count(),
+        overdueCreditsCount: await this.prisma.credit.count({ where: { statut: 'en_retard' } }),
+        totalMembers: await this.prisma.membre.count({
+          where: {
+            NOT: {
+               OR: [
+                 { typeCompte: 'SYSTEME' },
+                 { nomComplet: { contains: 'Compte Collectif' } },
+                 { nomComplet: { contains: 'REVENUS' } },
+                 { nomComplet: { contains: 'CRÉDITS' } },
+               ]
+            }
+          }
+        }),
+        totalAccounts: await this.prisma.compteEpargne.count({
+          where: {
+            NOT: {
+               OR: [
+                 { typeCompte: 'SYSTEME' },
+                 { membre: { nomComplet: { contains: 'Compte Collectif' } } },
+                 { membre: { nomComplet: { contains: 'REVENUS' } } },
+                 { membre: { nomComplet: { contains: 'CRÉDITS' } } },
+               ]
+            }
+          }
+        }),
       },
+      revenusDetails,
       tresorerie,
       byType,
       history,

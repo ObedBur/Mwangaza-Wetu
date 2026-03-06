@@ -15,7 +15,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 flex flex-col md:flex-row overflow-hidden">
+    <div className="min-h-screen bg-mesh-light dark:bg-mesh-dark text-slate-900 dark:text-slate-100 flex flex-col md:flex-row overflow-hidden selection:bg-primary/20">
       {/* Navigation latérale persistante */}
       <Sidebar />
 
