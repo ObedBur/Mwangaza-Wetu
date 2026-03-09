@@ -102,12 +102,12 @@ export default function MembersHeader({ onCreateClick, members = [] }: MembersHe
 
       // Tableau
       const tableData = members.map((member) => [
-        member.numeroCompte,
-        member.nomComplet,
-        member.telephone,
-        getAccountTypeLabel(member.typeCompte),
+        member.numeroCompte || '',
+        member.nomComplet || '',
+        member.telephone || '',
+        getAccountTypeLabel(member.typeCompte || ''),
         member.sexe === 'M' ? 'M' : 'F',
-        new Date(member.dateAdhesion).toLocaleDateString('fr-FR'),
+        member.dateAdhesion ? new Date(member.dateAdhesion).toLocaleDateString('fr-FR') : '',
         member.statut === 'actif' ? 'Actif' : 'Inactif',
       ]);
 

@@ -11,6 +11,10 @@ interface User {
     id: string;
     email: string;
     role: string;
+    numero_compte?: string;
+    nom_complet?: string;
+    photo_profil?: string;
+    firstAcces?: boolean;
 }
 
 /**
@@ -20,7 +24,7 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (token: string, userData: User) => void;
+    login: (token: string, userData: User, skipRedirect?: boolean) => void;
     logout: () => void;
 }
 
@@ -53,13 +57,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
     }, []);
 
-    const login = (token: string, userData: User) => {
+    const login = (token: string, userData: User, skipRedirect?: boolean) => {
         // Sauvegarde dans les cookies (accessible au serveur/middleware)
         setAuthCookies(token, userData);
         setUser(userData);
 
-        // On force un rafraîchissement ou une navigation pour que le middleware voie le nouveau cookie
-        router.push('/dashboard');
+        // Permettre de ne pas rediriger (ex: firstAcces pour changer le PIN)
+        if (skipRedirect) return;
+
+        // Redirection basée sur le rôle de l'utilisateur
+        const role = userData.role?.toUpperCase() || '';
+        console.log(`[AuthProvider] User logged in with role: ${role}`);
+
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+            router.push('/dashboard');
+        } else {
+            // Membre → portail membre
+            const target = `/portal/${userData.numero_compte || ''}`;
+            console.log(`[AuthProvider] Redirecting to portal: ${target}`);
+            router.push(target);
+        }
         router.refresh();
     };
 

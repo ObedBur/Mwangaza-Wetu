@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, User, Phone, Mail, MapPin, Calendar, CreditCard, Clock, Activity, Fingerprint, ShieldAlert, Loader2 } from "lucide-react";
+import { X, User, Phone, Mail, MapPin, Calendar, CreditCard, Clock, Activity, Fingerprint, ShieldAlert, Loader2, Printer } from "lucide-react";
 import { useMemberById } from "@/hooks/useMembers";
 import { ACCOUNT_TYPES } from "@/lib/constants";
+import { generateMemberReceiptPDF } from "@/lib/pdfGenerator";
 
 interface ViewMemberModalProps {
   memberId: number | null;
@@ -259,6 +260,13 @@ export default function ViewMemberModal({
               {/* Footer */}
               <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 rounded-b-3xl">
                 <button
+                      onClick={() => generateMemberReceiptPDF(member)}
+                      className="px-6 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center gap-2"
+                    >
+                      <Printer className="w-4 h-4" />
+                      Imprimer Fiche
+                    </button>
+                    <button
                   onClick={onClose}
                   className="px-6 py-2 rounded-xl text-slate-600 font-bold text-sm hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                 >

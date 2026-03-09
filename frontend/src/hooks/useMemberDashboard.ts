@@ -20,7 +20,18 @@ export interface MemberDashboardData {
       USD: number;
       FC: number;
     };
+    cumulative: {
+      USD: number;
+      FC: number;
+    };
   };
+  monthlyHistory: Array<{
+    name: string;
+    epargne: number;
+    retrait: number;
+    credit: number;
+    remboursement: number;
+  }>;
   activeCreditsDetails: Array<{
     id: number;
     montantInitial: number;
@@ -43,7 +54,7 @@ export interface MemberDashboardData {
 }
 
 const fetchMemberDashboard = async (identifier: string): Promise<MemberDashboardData> => {
-  const { data } = await apiClient.get<MemberDashboardData>(`/api/membres/dashboard/${identifier}`);
+  const { data } = await apiClient.get<MemberDashboardData>(`membres/dashboard/${identifier}`);
   return data;
 };
 

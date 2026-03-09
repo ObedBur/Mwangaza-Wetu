@@ -96,13 +96,13 @@ export default function MemberTableRow({
           {member.photoProfil && !imageError ? (
             <img
               src={getPhotoUrl(member.photoProfil)}
-              alt={member.nomComplet}
+              alt={member.nomComplet || ""}
               className="object-cover w-full h-full"
               onError={() => setImageError(true)}
             />
           ) : (
             <span className="text-sm font-bold text-primary">
-              {getInitials(member.nomComplet)}
+                {getInitials(member.nomComplet || "")}
             </span>
           )}
         </div>

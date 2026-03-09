@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X, Fingerprint, Loader2, Hash, User, Calendar, MapPin, DollarSign, Users, UserPlus, Info, CheckCircle, AlertCircle, Camera, Upload, Trash2 } from "lucide-react";
+import { X, Fingerprint, Loader2, Hash, User, Calendar, MapPin, DollarSign, Users, UserPlus, Info, CheckCircle, AlertCircle, Camera, Upload, Trash2, Eye, EyeOff } from "lucide-react";
 import { memberSchema, MemberInput } from "@/lib/validations";
 import { useGenerateAccountNumber } from "@/hooks/useMembers";
 import { useZkTeco } from "@/hooks/useZkTeco";
@@ -93,6 +93,7 @@ export default function CreateMemberModal({
 }: CreateMemberModalProps) {
   const [showDelegue, setShowDelegue] = useState(false);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // États pour les photos (base64)
   const [memberPhoto, setMemberPhoto] = useState<string>("");
@@ -475,6 +476,30 @@ export default function CreateMemberModal({
                       placeholder="email@example.com"
                       className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all"
                     />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-600">
+                      Code PIN / Mot de passe (Optionnel)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        {...register("motDePasse")}
+                        placeholder="Par défaut: 6 derniers chiffres tél."
+                        className="w-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs sm:text-sm p-2.5 focus:ring-2 focus:ring-primary/20 focus:border-transparent transition-all pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-[9px] text-slate-400 italic">
+                      Laissez vide pour la génération automatique.
+                    </p>
                   </div>
                 </div>
               )}

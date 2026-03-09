@@ -4,6 +4,7 @@ import "./globals.css";
 import QueryProvider from "@/providers/QueryProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { Toaster } from "@/components/ui/toaster";
+import FirstAccessGuard from "@/components/auth/FirstAccessGuard";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,6 +31,7 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             {children}
+            <FirstAccessGuard />
             <Toaster />
           </AuthProvider>
         </QueryProvider>

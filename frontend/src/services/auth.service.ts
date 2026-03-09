@@ -9,36 +9,58 @@ interface LoginResponse {
     id: string;
     email: string;
     role: string;
+    numero_compte?: string;
     nom_complet?: string;
+    photo_profil?: string;
+    firstAcces?: boolean;
   };
 }
 
 export const authService = {
   login: async (data: LoginInput) => {
-    // Déterminer si c'est un admin ou un membre (ou essayer les deux)
-    // Par défaut, on essaie comme membre s'il n'y a pas d'indication contraire
-    // Mais ici on va d'abord préparer l'objet DTO pour le backend
-    const isEmail = data.identifier.includes('@');
-    const loginDto = {
-      [isEmail ? 'email' : 'numeroCompte']: data.identifier,
-      password: data.password,
-    };
+    let loginDto: any = { password: data.password };
+    const ident = data.identifier.trim();
+
+    if (ident.includes('@')) {
+      loginDto.email = ident;
+    } else if (ident.toUpperCase().startsWith('MW-')) {
+      loginDto.numeroCompte = ident;
+    } else {
+      // Par défaut, on tente par téléphone si c'est surtout des chiffres
+      loginDto.telephone = ident;
+    }
+
+    // Détecter si c'est un identifiant membre (format MW-XXX-XXXXXX)
+    const isMemberIdentifier = /^MW-[A-Z]{1,4}-/i.test(ident);
 
     try {
-      // On essaie d'abord la connexion admin (plus restrictive)
-      console.log('Tentative connexion admin...');
-      const response = await apiClient.post<LoginResponse>('auth/admin/login', loginDto);
-      return response.data;
-    } catch (adminError: any) {
-      // Si l'admin n'est pas trouvé, on essaie comme membre
-      // Note: On utilise adminError.status car l'apiClient normalise l'erreur
-      if (adminError.status === 401 || adminError.status === 404) {
-        console.log('Admin non trouvé, tentative connexion membre...');
+      // If it looks like a member account number, try member login directly
+      if (isMemberIdentifier) {
         const response = await apiClient.post<LoginResponse>('auth/membre/login', loginDto);
         return response.data;
       }
-      // Si c'est une autre erreur (ex: mauvais mot de passe pour un compte trouvé), on la propage
-      throw adminError;
+
+      // Otherwise, try admin first, then member
+      try {
+        const response = await apiClient.post<LoginResponse>('auth/admin/login', loginDto);
+        return response.data;
+      } catch (adminError: any) {
+        if (adminError.status === 401 || adminError.status === 404) {
+          const response = await apiClient.post<LoginResponse>('auth/membre/login', loginDto);
+          return response.data;
+        }
+        throw adminError;
+      }
+    } catch (error: any) {
+      throw error;
     }
+  },
+
+  changePassword: async (numeroCompte: string, newPassword: string) => {
+    const response = await apiClient.post('auth/membre/change-password', {
+      numeroCompte,
+      newPassword,
+    });
+    return response.data;
   },
 };

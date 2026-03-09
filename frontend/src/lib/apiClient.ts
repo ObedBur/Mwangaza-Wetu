@@ -84,7 +84,9 @@ apiClient.interceptors.response.use(
 
     // Gestion de l'expiration de session (401)
     // On ne redirige pas si on est déjà sur une route d'authentification
-    const isAuthRoute = error.config?.url?.includes('/auth/');
+    // Note: l'URL peut être relative ('auth/...') ou absolue ('/auth/...')
+    const requestUrl = error.config?.url || '';
+    const isAuthRoute = requestUrl.includes('/auth/') || requestUrl.startsWith('auth/');
     if (status === 401 && !isAuthRoute && typeof window !== 'undefined') {
       removeAuthCookies();
       window.location.href = '/';

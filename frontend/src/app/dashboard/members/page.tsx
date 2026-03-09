@@ -9,6 +9,7 @@ import ViewMemberModal from "@/components/members/ViewMemberModal";
 import { useCreateMember, useMembers } from "@/hooks/useMembers";
 import { MemberInput } from "@/lib/validations";
 import { useToast } from "@/hooks/use-toast";
+import { generateMemberReceiptPDF } from "@/lib/pdfGenerator";
 
 export default function MembersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,9 +30,13 @@ export default function MembersPage() {
       const response = await createMember(data);
       console.log(" Membre créé avec succès :", response);
       setIsModalOpen(false);
+
+      // Générer automatiquement le PDF d'adhésion
+      generateMemberReceiptPDF(response);
+
       toastSuccess(
         "Membre créé avec succès",
-        `Le numéro de compte généré est : ${response.numeroCompte}`
+        `Le numéro de compte ${response.numeroCompte} a été généré. Le PDF d'adhésion a été téléchargé.`
       );
     } catch (error: any) {
       console.error(" Impossible de créer le membre", error);

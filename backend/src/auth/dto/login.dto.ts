@@ -10,6 +10,10 @@ export class LoginDto {
   numeroCompte?: string;
 
   @IsString()
+  @IsOptional()
+  telephone?: string;
+
+  @IsString()
   @MinLength(4)
   password: string;
 }

@@ -18,14 +18,22 @@ export default function LoginCard() {
     try {
       const response = await authService.login(formData);
 
-      // Enregistrement dans le contexte d'auth (cookies + redirection)
-      login(response.token, {
+      const userData = {
         id: response.user.id,
         email: response.user.email,
         role: response.user.role,
-      });
+        numero_compte: response.user.numero_compte,
+        nom_complet: response.user.nom_complet,
+        firstAcces: response.user.firstAcces,
+      };
 
-      toastSuccess('Connexion réussie', `Bienvenue ${response.user.nom_complet || response.user.email}`);
+      // Enregistrement dans le contexte d'auth (cookies + redirection basée sur le rôle)
+      login(response.token, userData);
+
+      // We only show success message if not first access, as the FirstAccessGuard will handle that flow.
+      if (!response.user.firstAcces) {
+        toastSuccess('Connexion réussie', `Bienvenue ${response.user.nom_complet || response.user.email}`);
+      }
     } catch (err: any) {
       console.error('Login error:', err);
       // Extraction du message d'erreur normalisé par l'apiClient
@@ -56,7 +64,6 @@ export default function LoginCard() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             Membre se connecter
-            
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Veuillez entrer vos identifiants pour accéder à votre compte.

@@ -202,6 +202,13 @@ export class MembersService {
     let hashedPassword: string | null = null;
     if (motDePasse) {
       hashedPassword = await bcrypt.hash(motDePasse, 10);
+    } else if (createMemberDto.telephone) {
+      // Générer le mot de passe par défaut (les 6 derniers chiffres du numéro de téléphone)
+      const digitsOnly = createMemberDto.telephone.replace(/\D/g, '');
+      if (digitsOnly.length >= 6) {
+        const defaultPin = digitsOnly.slice(-6);
+        hashedPassword = await bcrypt.hash(defaultPin, 10);
+      }
     }
 
     // Gérer la photo du membre
@@ -210,96 +217,104 @@ export class MembersService {
       'photo',
     );
 
-    return this.prisma.$transaction(async (tx) => {
-      const membre = await tx.membre.create({
-        data: {
-          numeroCompte: finalNumeroCompte,
-          nomComplet: createMemberDto.nomComplet,
-          telephone: createMemberDto.telephone,
-          email: createMemberDto.email,
-          adresse: createMemberDto.adresse,
-          sexe: createMemberDto.sexe as Sexe,
-          typeCompte: typeNormalise, // Utiliser la valeur normalisée
-          statut: createMemberDto.statut as PrismaStatutMembre,
-          photoProfil: photoFileName,
-          userId: createMemberDto.userId || null,
-          dateAdhesion: new Date(dateAdhesion),
-          motDePasse: hashedPassword,
-          dateNaissance: createMemberDto.dateNaissance
-            ? new Date(createMemberDto.dateNaissance)
-            : null,
-          idNationale: createMemberDto.idNationale,
-        },
+    try {
+      const result = await this.prisma.$transaction(async (tx) => {
+        const membre = await tx.membre.create({
+          data: {
+            numeroCompte: finalNumeroCompte,
+            nomComplet: createMemberDto.nomComplet,
+            telephone: createMemberDto.telephone,
+            email: createMemberDto.email,
+            adresse: createMemberDto.adresse,
+            sexe: createMemberDto.sexe as Sexe,
+            typeCompte: typeNormalise, // Utiliser la valeur normalisée
+            statut: createMemberDto.statut as PrismaStatutMembre,
+            photoProfil: photoFileName,
+            userId: createMemberDto.userId || null,
+            dateAdhesion: new Date(dateAdhesion),
+            motDePasse: hashedPassword,
+            firstAcces: true,
+            dateNaissance: createMemberDto.dateNaissance
+              ? new Date(createMemberDto.dateNaissance)
+              : null,
+            idNationale: createMemberDto.idNationale,
+          },
+        });
+
+        // Enregistrer le revenu d'Adhésion (2000 FC) dans la table Revenu
+        const revType = await tx.revenuType.findFirst({
+          where: { nom: 'Système Membre' },
+        });
+
+        if (revType) {
+          // 1. Enregistrement dans la table Revenu (Nouvelle architecture)
+          await tx.revenu.create({
+            data: {
+              typeCompte: typeNormalise,
+              typeRevenuId: revType.id,
+              montant: 2000,
+              devise: Devise.FC,
+              dateOperation: new Date(dateAdhesion),
+              sourceCompte: finalNumeroCompte,
+            },
+          });
+
+          // 2. Enregistrement sur le compte de REVENUS de la section
+          const sectionTrigram = getSectionTrigram(typeNormalise);
+          const revenueAccount = `MW-${sectionTrigram}-REVENUS`;
+
+          await tx.epargne.create({
+            data: {
+              compte: revenueAccount,
+              typeOperation: 'depot',
+              devise: Devise.FC,
+              montant: 2000,
+              dateOperation: new Date(dateAdhesion),
+              description: `Frais d'adhésion membre ${finalNumeroCompte}`,
+            },
+          });
+
+          // 3. Enregistrement sur le compte REVENUS GLOBAL
+          await tx.epargne.create({
+            data: {
+              compte: 'MW-REVENUS-GLOBAL',
+              typeOperation: 'depot',
+              devise: Devise.FC,
+              montant: 2000,
+              dateOperation: new Date(dateAdhesion),
+              description: `Frais d'adhésion membre ${finalNumeroCompte} (via ${typeNormalise})`,
+            },
+          });
+        }
+
+        // 2. Gérer le délégué
+        if (delegue) {
+          const deleguePhotoFileName = this.saveBase64Image(
+            delegue.photoProfil || '',
+            'photo_delegue',
+          );
+          await tx.delegue.create({
+            data: {
+              membreId: membre.id,
+              nom: delegue.nom,
+              telephone: delegue.telephone,
+              relation: delegue.relation,
+              pieceIdentite: delegue.pieceIdentite,
+              userId: delegue.userId || null,
+              photoProfil: deleguePhotoFileName,
+            },
+          });
+        }
+
+        return membre;
       });
 
-      // Enregistrer le revenu d'Adhésion (2000 FC) dans la table Revenu
-      const revType = await tx.revenuType.findFirst({
-        where: { nom: 'Système Membre' },
-      });
-
-      if (revType) {
-        // 1. Enregistrement dans la table Revenu (Nouvelle architecture)
-        await tx.revenu.create({
-          data: {
-            typeCompte: typeNormalise,
-            typeRevenuId: revType.id,
-            montant: 2000,
-            devise: Devise.FC,
-            dateOperation: new Date(dateAdhesion),
-            sourceCompte: finalNumeroCompte,
-          },
-        });
-
-        // 2. Enregistrement sur le compte de REVENUS de la section
-        const sectionTrigram = getSectionTrigram(typeNormalise);
-        const revenueAccount = `MW-${sectionTrigram}-REVENUS`;
-
-        await tx.epargne.create({
-          data: {
-            compte: revenueAccount,
-            typeOperation: 'depot',
-            devise: Devise.FC,
-            montant: 2000,
-            dateOperation: new Date(dateAdhesion),
-            description: `Frais d'adhésion membre ${finalNumeroCompte}`,
-          },
-        });
-
-        // 3. Enregistrement sur le compte REVENUS GLOBAL
-        await tx.epargne.create({
-          data: {
-            compte: 'MW-REVENUS-GLOBAL',
-            typeOperation: 'depot',
-            devise: Devise.FC,
-            montant: 2000,
-            dateOperation: new Date(dateAdhesion),
-            description: `Frais d'adhésion membre ${finalNumeroCompte} (via ${typeNormalise})`,
-          },
-        });
-      }
-
-      // 2. Gérer le délégué
-      if (delegue) {
-        const deleguePhotoFileName = this.saveBase64Image(
-          delegue.photoProfil || '',
-          'photo_delegue',
-        );
-        await tx.delegue.create({
-          data: {
-            membreId: membre.id,
-            nom: delegue.nom,
-            telephone: delegue.telephone,
-            relation: delegue.relation,
-            pieceIdentite: delegue.pieceIdentite,
-            userId: delegue.userId,
-            photoProfil: deleguePhotoFileName,
-          },
-        });
-      }
-
-      this.logger.log(`✅ Membre créé avec succès : ${membre.numeroCompte} - ${membre.nomComplet}`);
-      return membre;
-    });
+      this.logger.log(`[SUCCESS] Membre créé : ${result.numeroCompte} - ${result.nomComplet}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[ERROR] Échec de création du membre : ${error.message}`);
+      throw error;
+    }
   }
 
   async generateNumero(year: number, section?: string) {
@@ -607,21 +622,30 @@ export class MembersService {
 
     if (!membre) throw new NotFoundException('Membre non trouvé');
 
+    if (membre.firstAcces) {
+      throw new BadRequestException('Veuillez changer votre mot de passe pour accéder à votre tableau de bord');
+    }
+
     // Mettre à plat et trier les transactions récentes interactives
     const allTransactions = [
-      ...membre.epargnes.map(e => ({ type: 'depot', devise: e.devise, montant: Number(e.montant), date: e.dateOperation, description: e.description })),
-      ...membre.retraits.map(r => ({ type: 'retrait', devise: r.devise, montant: Number(r.montantRetire), date: r.dateOperation, description: r.description })),
-      ...membre.credits.flatMap(c => c.remboursements.map(r => ({ type: 'remboursement', devise: r.devise, montant: Number(r.montant), date: r.dateRemboursement, description: r.description })))
+      ...membre.epargnes
+        .filter(e => e.typeOperation === 'depot')
+        .map(e => ({ type: 'depot', devise: e.devise, montant: Number(e.montant), date: e.dateOperation, description: e.description })),
+      ...membre.retraits
+        .map(r => ({ type: 'retrait', devise: r.devise, montant: Number(r.montant), date: r.dateOperation, description: r.description, frais: Number(r.frais) })),
+      ...membre.credits.flatMap(c =>
+        c.remboursements.map(r => ({ type: 'remboursement', devise: r.devise, montant: Number(r.montant), date: r.dateRemboursement, description: r.description }))
+      )
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Calculs de l'épargne (dépôts - retraits)
     const epargneUSD = 
-      membre.epargnes.filter(e => e.devise === Devise.USD).reduce((sum, e) => sum + Number(e.montant), 0) -
-      membre.retraits.filter(r => r.devise === Devise.USD).reduce((sum, r) => sum + Number(r.montantRetire), 0);
+      membre.epargnes.filter(e => e.devise === Devise.USD && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant), 0) -
+      membre.retraits.filter(r => r.devise === Devise.USD).reduce((sum, r) => sum + Number(r.montant) + Number(r.frais), 0);
 
     const epargneFC = 
-      membre.epargnes.filter(e => e.devise === Devise.FC).reduce((sum, e) => sum + Number(e.montant), 0) -
-      membre.retraits.filter(r => r.devise === Devise.FC).reduce((sum, r) => sum + Number(r.montantRetire), 0);
+      membre.epargnes.filter(e => e.devise === Devise.FC && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant), 0) -
+      membre.retraits.filter(r => r.devise === Devise.FC).reduce((sum, r) => sum + Number(r.montant) + Number(r.frais), 0);
 
     // Filter active credits
     const activeCredits = membre.credits.filter(c => c.statut === PrismaStatutMembre.actif || c.statut === 'en_retard');
@@ -652,6 +676,56 @@ export class MembersService {
       };
     });
 
+    // Calculer l'épargne cumulée (Total dépôts de tous les temps)
+    const cumulativeUSD = membre.epargnes.filter(e => e.devise === Devise.USD && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant), 0);
+    const cumulativeFC = membre.epargnes.filter(e => e.devise === Devise.FC && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant), 0);
+
+    // Calculer l'évolution sur les 6 derniers mois
+    const months: any[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const label = d.toLocaleDateString('fr-FR', { month: 'short' });
+
+      const monthEpargne = membre.epargnes
+        .filter(e => {
+          const ed = new Date(e.dateOperation);
+          return ed.getFullYear() === year && ed.getMonth() === month && e.typeOperation === 'depot';
+        })
+        .reduce((sum, e) => sum + Number(e.montant) * (e.devise === 'FC' ? 0.0004 : 1), 0);
+
+      const monthRetrait = membre.retraits
+        .filter(r => {
+          const rd = new Date(r.dateOperation);
+          return rd.getFullYear() === year && rd.getMonth() === month;
+        })
+        .reduce((sum, r) => sum + Number(r.montant) * (r.devise === 'FC' ? 0.0004 : 1), 0);
+
+      const monthCredit = membre.credits
+        .filter(c => {
+          const cd = new Date(c.dateDebut);
+          return cd.getFullYear() === year && cd.getMonth() === month;
+        })
+        .reduce((sum, c) => sum + Number(c.montant) * (c.devise === 'FC' ? 0.0004 : 1), 0);
+
+      const monthRemboursement = membre.credits.flatMap(c => c.remboursements)
+        .filter(r => {
+          const rd = new Date(r.dateRemboursement);
+          return rd.getFullYear() === year && rd.getMonth() === month;
+        })
+        .reduce((sum, r) => sum + Number(r.montant) * (r.devise === 'FC' ? 0.0004 : 1), 0);
+
+      months.push({
+        name: label,
+        epargne: monthEpargne,
+        retrait: monthRetrait,
+        credit: monthCredit,
+        remboursement: monthRemboursement
+      });
+    }
+
     return {
       profile: {
         id: membre.id,
@@ -670,10 +744,15 @@ export class MembersService {
         activeCredits: {
           USD: unpaidCreditsUSD,
           FC: unpaidCreditsFC
+        },
+        cumulative: {
+          USD: cumulativeUSD,
+          FC: cumulativeFC
         }
       },
+      monthlyHistory: months,
       activeCreditsDetails: creditsDetails,
-      recentTransactions: allTransactions.slice(0, 15) // Only last 15 for dashboard performance
+      recentTransactions: allTransactions.slice(0, 15)
     };
   }
 }

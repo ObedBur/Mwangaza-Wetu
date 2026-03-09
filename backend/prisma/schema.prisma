@@ -31,6 +31,7 @@ model Membre {
   motDePasse     String?         @map("mot_de_passe")
   dateNaissance  DateTime?       @map("date_naissance")
   idNationale    String?         @map("id_nationale")
+  firstAcces     Boolean         @default(true) @map("first_acces")
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
   attendances    Attendance[]
@@ -39,6 +40,7 @@ model Membre {
   delegues       Delegue[]
   epargnes       Epargne[]
   retraits       Retrait[]
+  notifications  Notification[]
 
   @@map("membres")
 }
@@ -54,6 +56,7 @@ model Administrateur {
   actif        Boolean  @default(true)
   numeroCompte String?  @unique @map("numero_compte")
   userId       String?  @unique @map("userId")
+  photoProfil   String?  @map("photo_profil")
   dateCreation DateTime @default(now()) @map("date_creation")
 
   @@map("administrateurs")
@@ -276,4 +279,19 @@ model Revenu {
   @@index([remboursementId])
   @@index([dateOperation])
   @@map("revenus")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  membreId  Int
+  titre     String
+  message   String
+  type      String   @default("info") // info, success, warning, credit, epargne
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+  membre    Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+
+  @@index([membreId])
+  @@index([createdAt])
+  @@map("notifications")
 }

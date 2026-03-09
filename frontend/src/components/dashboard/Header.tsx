@@ -10,11 +10,16 @@ import {
   History,
   Info,
   HelpCircle,
+  User,
+  Bell,
+  LogOut,
 } from "lucide-react";
 import Image from "next/image";
+import { useAuth } from "@/providers/AuthProvider";
 
 export default function Header() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   return (
     <header className="glass-panel sticky top-4 z-50 rounded-2xl mx-4 my-4 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
@@ -59,24 +64,34 @@ export default function Header() {
         </div>
 
         {/* Profile and Settings */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Notification Button */}
+          <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors relative">
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
+          </button>
+
           {/* User Profile */}
-          <div className="flex items-center gap-2 cursor-pointer">
+          <div className="flex items-center gap-2 cursor-pointer group/profile">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-slate-900 dark:text-white leading-none">
-                Administrateur
+                {user?.nom_complet || "Administrateur"}
               </p>
               <p className="text-[10px] text-slate-400 uppercase font-bold mt-1">
-                Niveau Accès 1
+                {user?.role === "superadmin" ? "Super Admin" : "Admin Niveau 1"}
               </p>
             </div>
-            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center border-2 border-primary/20 overflow-hidden relative">
-              <Image
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuApoZn5sQAPSRUE6zPInfR4iqS79JGKzojMX50f0NycBi9WY2xXNSGXynNkJn5taP2yxqNWsp-hivTJl2NdA3Ua5ezBMrW5MEdb_uPvQ4DAfj3vBBaGrEpsiX1wQrb1XrDHQalfVvHO7UQ8QSz524C7482SH570j5PV973LbZVW5MvNRwIue8IiYeM-eddQk_rNsxLJ1bLEVz6HDNkSz6wxwQwBegpSmCFALhBTmy8bOBfHBpOpBms1EGoNVSn5zNbHaOtqrcHqfaA"
-                alt="Admin Profile"
-                fill
-                className="object-cover"
-              />
+            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center border-2 border-primary/20 overflow-hidden relative group-hover/profile:border-primary/50 transition-colors">
+              {user?.photo_profil ? (
+                <Image
+                  src={user.photo_profil}
+                  alt="Admin Profile"
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <User className="w-6 h-6 text-slate-400" />
+              )}
             </div>
           </div>
 
@@ -94,21 +109,21 @@ export default function Header() {
               <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl py-2 z-50">
                 <a
                   className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-primary/10 hover:text-primary transition-colors"
-                  href="#"
+                  href="/dashboard/parametres"
                 >
                   <UserPlus className="w-5 h-5 mr-3" /> Ajouter un
                   administrateur
                 </a>
                 <a
                   className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-primary/10 hover:text-primary transition-colors"
-                  href="#"
+                  href="/dashboard/parametres"
                 >
                   <Users className="w-5 h-5 mr-3" /> Gérer les administrateurs
                 </a>
                 <div className="border-t border-slate-100 dark:border-slate-700 my-1"></div>
                 <a
                   className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-primary/10 hover:text-primary transition-colors"
-                  href="#"
+                  href="/dashboard/parametres"
                 >
                   <Wrench className="w-5 h-5 mr-3" /> Paramètres généraux
                 </a>
@@ -125,12 +140,12 @@ export default function Header() {
                   <Info className="w-5 h-5 mr-3" /> Infos sur la coopérative
                 </a>
                 <div className="border-t border-slate-100 dark:border-slate-700 my-1"></div>
-                <a
-                  className="flex items-center px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-primary/10 hover:text-primary transition-colors"
-                  href="#"
+                <button
+                  onClick={() => logout()}
+                  className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
-                  <HelpCircle className="w-5 h-5 mr-3" /> Aide & Support
-                </a>
+                  <LogOut className="w-5 h-5 mr-3" /> Déconnexion
+                </button>
               </div>
             )}
           </div>

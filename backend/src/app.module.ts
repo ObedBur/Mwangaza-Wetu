@@ -16,6 +16,7 @@ import { ReportsModule } from './reports/reports.module';
 import { ZktecoModule } from './zkteco/zkteco.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { join } from 'path';
       rootPath: join(process.cwd(), 'uploads'),
       serveRoot: '/uploads',
     }),
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
