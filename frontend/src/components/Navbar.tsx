@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useAuth } from "@/providers/AuthProvider";
-import { Bell } from "lucide-react";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 export default function Navbar() {
   const { user, isAuthenticated } = useAuth();
@@ -57,10 +57,10 @@ export default function Navbar() {
                 <button className="px-4 py-1.5 rounded-xl text-xs font-black bg-indigo-600 shadow-lg shadow-indigo-600/20 text-white transition-all uppercase tracking-tighter">Mois</button>
                 <button className="px-4 py-1.5 rounded-xl text-xs font-bold text-[#64748B] dark:text-[#94A3B8] hover:text-indigo-600 dark:hover:text-indigo-400 transition-all uppercase tracking-tighter">Année</button>
               </div>
-              <button className="w-10 h-10 rounded-2xl bg-white dark:bg-[#0F172A] border border-slate-100 dark:border-white/5 flex items-center justify-center text-[#64748B] hover:text-indigo-600 transition-colors shadow-sm relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white dark:border-[#0F172A]" />
-              </button>
+              <NotificationBell
+                membreId={user?.id ? parseInt(user.id) : undefined}
+                membreNumero={user?.numero_compte}
+              />
             </div>
           </div>
         )}

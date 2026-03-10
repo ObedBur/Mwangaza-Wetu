@@ -9,6 +9,7 @@ import { BalancesService } from '../balances/balances.service';
 import { CreateCreditDto, StatutCredit } from './dto/create-credit.dto';
 import { Devise } from '@prisma/client';
 import { getSectionTrigram } from '../common/constants/sections';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class CreditsService {
@@ -17,6 +18,7 @@ export class CreditsService {
   constructor(
     private prisma: PrismaService,
     private balancesService: BalancesService,
+    private notificationsService: NotificationsService,
   ) { }
 
   async findAll() {
@@ -268,6 +270,14 @@ export class CreditsService {
     // Appel à la libération dynamique de la garantie
     await this.balancesService.rafraichirGarantie(membre.id);
     this.logger.log(`🔒 Garantie recalculée pour membre #${membre.id}`);
+
+    // Notifier les administrateurs
+    await this.notificationsService.notifyAllAdmins(
+      'Nouveau Crédit Accordé',
+      `Un crédit de ${montant} ${devise} a été accordé au compte ${numeroCompte}.`,
+      'credit'
+    );
+
     return credit;
   }
 }

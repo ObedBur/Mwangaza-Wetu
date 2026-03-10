@@ -3,9 +3,10 @@ import { RemboursementsService } from './remboursements.service';
 import { RemboursementsController } from './remboursements.controller';
 import { CreditsModule } from '../credits/credits.module';
 import { BalancesModule } from '../balances/balances.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [forwardRef(() => CreditsModule), BalancesModule],
+  imports: [forwardRef(() => CreditsModule), BalancesModule, NotificationsModule],
   providers: [RemboursementsService],
   controllers: [RemboursementsController],
   exports: [RemboursementsService],

@@ -11,11 +11,11 @@ import {
   Info,
   HelpCircle,
   User,
-  Bell,
   LogOut,
 } from "lucide-react";
 import Image from "next/image";
 import { useAuth } from "@/providers/AuthProvider";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 export default function Header() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -66,10 +66,9 @@ export default function Header() {
         {/* Profile and Settings */}
         <div className="flex items-center gap-2 sm:gap-4">
           {/* Notification Button */}
-          <button className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 transition-colors relative">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
-          </button>
+          {user?.id && (
+            <NotificationBell adminId={parseInt(user.id)} />
+          )}
 
           {/* User Profile */}
           <div className="flex items-center gap-2 cursor-pointer group/profile">

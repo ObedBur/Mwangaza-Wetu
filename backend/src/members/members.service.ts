@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateMemberDto, Sexe } from './dto/create-member.dto';
 import {
   normalizeSectionName,
@@ -19,7 +20,10 @@ import { Prisma, StatutMembre as PrismaStatutMembre, Devise } from '@prisma/clie
 @Injectable()
 export class MembersService {
   private readonly logger = new Logger(MembersService.name);
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService
+  ) { }
 
   private readonly uploadsDir = path.join(process.cwd(), 'uploads');
 
@@ -310,6 +314,14 @@ export class MembersService {
       });
 
       this.logger.log(`[SUCCESS] Membre créé : ${result.numeroCompte} - ${result.nomComplet}`);
+      
+      // Notifier les administrateurs
+      await this.notificationsService.notifyAllAdmins(
+        'Nouveau Membre',
+        `Le membre ${result.nomComplet} (${result.numeroCompte}) vient d'être enregistré.`,
+        'info'
+      );
+
       return result;
     } catch (error) {
       this.logger.error(`[ERROR] Échec de création du membre : ${error.message}`);

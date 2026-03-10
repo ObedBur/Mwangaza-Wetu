@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { CreditsService } from './credits.service';
 import { CreditsController } from './credits.controller';
 import { BalancesModule } from '../balances/balances.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  imports: [BalancesModule],
-  providers: [CreditsService],
+  imports: [BalancesModule, NotificationsModule, PrismaModule],
   controllers: [CreditsController],
-  exports: [CreditsService],
+  providers: [CreditsService],
 })
-export class CreditsModule { }
+export class CreditsModule {}

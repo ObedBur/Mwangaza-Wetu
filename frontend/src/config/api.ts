@@ -62,6 +62,9 @@ export const API_ROUTES = {
   // ─── Rapports ─────────────────────────────────────
   RAPPORTS: '/rapport',
 
+  // ─── Notifications ────────────────────────────────
+  NOTIFICATIONS: '/notifications',
+
   // ─── Routes en attente de backend ─────────────────
   // CASHIERS: '/cashiers',       // TODO: pas de contrôleur backend encore
   // ACCOUNTING: '/accounting',   // TODO: pas de contrôleur backend encore

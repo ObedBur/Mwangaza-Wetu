@@ -5,6 +5,7 @@ import { Devise, TypeOperationEpargne } from '@prisma/client';
 import { ParametresService } from '../parametres/parametres.service';
 import { getSectionTrigram } from '../common/constants/sections';
 import { BalancesService } from '../balances/balances.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class WithdrawalsService {
@@ -12,6 +13,7 @@ export class WithdrawalsService {
     private prisma: PrismaService,
     private parametresService: ParametresService,
     private balancesService: BalancesService,
+    private notificationsService: NotificationsService,
   ) { }
 
   private async getFeesConfig(devise: string) {
@@ -273,6 +275,14 @@ export class WithdrawalsService {
       });
 
       console.log('✅ Retrait créé avec succès:', retrait);
+
+      // Notifier les administrateurs
+      await this.notificationsService.notifyAllAdmins(
+        'Nouveau Retrait',
+        `Un retrait de ${montant} ${devise} a été effectué sur le compte ${compte}.`,
+        'warning'
+      );
+
       return retrait;
     } catch (error: any) {
       console.error('❌ Erreur lors de la création du retrait:', error.message || error);

@@ -58,6 +58,7 @@ model Administrateur {
   userId       String?  @unique @map("userId")
   photoProfil   String?  @map("photo_profil")
   dateCreation DateTime @default(now()) @map("date_creation")
+  notifications Notification[]
 
   @@map("administrateurs")
 }
@@ -283,15 +284,18 @@ model Revenu {
 
 model Notification {
   id        Int      @id @default(autoincrement())
-  membreId  Int
+  membreId  Int?     @map("membre_id")
+  adminId   Int?     @map("admin_id")
   titre     String
   message   String
   type      String   @default("info") // info, success, warning, credit, epargne
   isRead    Boolean  @default(false) @map("is_read")
   createdAt DateTime @default(now()) @map("created_at")
-  membre    Membre   @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  membre    Membre?  @relation(fields: [membreId], references: [id], onDelete: Cascade)
+  admin     Administrateur? @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
   @@index([membreId])
+  @@index([adminId])
   @@index([createdAt])
   @@map("notifications")
 }

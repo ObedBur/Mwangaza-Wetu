@@ -10,6 +10,7 @@ import { CreateRemboursementDto } from './dto/create-remboursement.dto';
 import { Devise, StatutCredit, Prisma, Remboursement } from '@prisma/client';
 import { getSectionTrigram } from '../common/constants/sections';
 import { BalancesService } from '../balances/balances.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import * as crypto from 'crypto';
 
 const Decimal = Prisma.Decimal;
@@ -21,6 +22,7 @@ export class RemboursementsService {
   constructor(
     private prisma: PrismaService,
     private balancesService: BalancesService,
+    private notificationsService: NotificationsService,
   ) { }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -301,6 +303,13 @@ export class RemboursementsService {
 
       // Libération des garanties
       await this.balancesService.rafraichirGarantie(credit.membre.id);
+
+      // Notifier les administrateurs
+      await this.notificationsService.notifyAllAdmins(
+        'Nouveau Remboursement',
+        `Un remboursement de ${montant} ${devise} a été reçu pour le crédit #${creditId} (Compte: ${credit.numeroCompte}).`,
+        'success'
+      );
 
       return this.mapToResponse(result);
     } catch (error) {

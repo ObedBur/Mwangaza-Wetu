@@ -6,12 +6,14 @@ import {
   TypeOperationEpargne as PrismaTypeOperation,
 } from '@prisma/client';
 import { ParametresService } from '../parametres/parametres.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class SavingsService {
   constructor(
     private prisma: PrismaService,
     private parametresService: ParametresService,
+    private notificationsService: NotificationsService,
   ) { }
 
   async findAll(params: { page?: number; pageSize?: number; type?: TypeOperation }) {
@@ -182,7 +184,7 @@ export class SavingsService {
       }
     }
 
-    return this.prisma.epargne.create({
+    const epargne = await this.prisma.epargne.create({
       data: {
         compte: createDto.compte,
         typeOperation:
@@ -193,6 +195,16 @@ export class SavingsService {
         description: createDto.description,
       },
     });
+
+    // Notifier les administrateurs
+    const operationName = createDto.typeOperation === TypeOperation.depot ? 'Dépôt' : 'Retrait (Épargne)';
+    await this.notificationsService.notifyAllAdmins(
+      `Nouveau ${operationName}`,
+      `Un ${operationName.toLowerCase()} de ${createDto.montant} ${createDto.devise} a été effectué sur le compte ${createDto.compte}.`,
+      'epargne'
+    );
+
+    return epargne;
   }
 
   async remove(id: number) {
