@@ -30,7 +30,7 @@ export const SECTION_TRIGRAMS = {
 export function normalizeSectionName(name: string): string {
   if (!name) return '';
   const n = name.trim().toUpperCase();
-  // Handling accents for HOPITAL
+  // 
   if (n === 'HÔPITAL' || n === 'HOPITAL') return 'HOPITAL';
   return SECTIONS_MAPPING[n as keyof typeof SECTIONS_MAPPING] || n;
 }

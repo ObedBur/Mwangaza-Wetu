@@ -1,0 +1,51 @@
+### VARIABLES
+@baseUrl = http://localhost:3000/api
+@adminEmail = admin@mwangaza.cd
+@adminPassword = Admin@123
+@membreEmail = janisse@gmai.com
+@membrePassword = NewPassword123
+
+### 1. TEST DE LOGIN ADMIN (SUCCÈS)
+# @name loginAdmin
+POST {{baseUrl}}/auth/admin/login
+Content-Type: application/json
+
+{
+    "email": "{{adminEmail}}",
+    "password": "{{adminPassword}}"
+}
+
+### 2. RÉCUPÉRATION DU TOKEN ADMIN
+@adminToken = {{loginAdmin.response.body.token}}
+
+### 3. TEST DE LOGIN MEMBRE (SUCCÈS)
+# @name loginMembre
+POST {{baseUrl}}/auth/membre/login
+Content-Type: application/json
+
+{
+    "email": "{{membreEmail}}",
+    "password": "{{membrePassword}}"
+}
+
+### 4. RÉCUPÉRATION DU TOKEN MEMBRE
+@membreToken = {{loginMembre.response.body.token}}
+
+### 5. TEST D'ERREUR (MAUVAIS MOT DE PASSE ADMIN)
+POST {{baseUrl}}/auth/admin/login
+Content-Type: application/json
+
+{
+    "email": "{{adminEmail}}",
+    "password": "WrongPassword"
+}
+# Attendu : 401 Unauthorized
+
+### 6. TEST D'ACCÈS PROTÉGÉ SANS TOKEN (ATTENTION : ACTUELLEMENT TOUT EST PUBLIC)
+GET {{baseUrl}}/membres
+# Devrait être : 401 Unauthorized (Dès que le Guard sera activé)
+
+### 7. TEST D'ACCÈS PROTÉGÉ AVEC TOKEN
+GET {{baseUrl}}/membres
+Authorization: Bearer {{adminToken}}
+# Attendu : 200 OK

@@ -20,8 +20,8 @@ model Membre {
   numeroCompte   String          @unique @map("numero_compte")
   nomComplet     String          @map("nom_complet")
   dateAdhesion   DateTime        @map("date_adhesion")
-  telephone      String
-  email          String?
+  telephone      String          @unique
+  email          String?         @unique
   adresse        String?
   sexe           Sexe?
   typeCompte     String          @map("type_compte")

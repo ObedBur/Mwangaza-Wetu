@@ -18,6 +18,10 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
+  /**
+   * Authentifie un administrateur par email ou numéro de compte.
+   * Vérifie également si le compte est actif avant de générer le token.
+   */
   async loginAdmin(loginDto: LoginDto) {
     const { email, numeroCompte, password } = loginDto;
     let admin: Administrateur | null = null;
@@ -61,6 +65,10 @@ export class AuthService {
     };
   }
 
+  /**
+   * Authentifie un membre par email, numéro de compte ou téléphone.
+   * Vérifie l'existence du mot de passe et l'état du compte.
+   */
   async loginMembre(loginDto: LoginDto) {
     const { email, numeroCompte, telephone, password } = loginDto;
     let membre: Membre | null = null;
@@ -109,6 +117,10 @@ export class AuthService {
     };
   }
 
+  /**
+   * Permet à un membre de changer son mot de passe initial.
+   * Met à jour le flag firstAcces à false après le changement.
+   */
   async changePassword(numeroCompte: string, newPassword: string) {
     const membre = await this.prisma.membre.findUnique({
       where: { numeroCompte },

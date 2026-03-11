@@ -15,14 +15,17 @@ import {
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
+import { randomUUID } from 'crypto';
 import { Prisma, StatutMembre as PrismaStatutMembre, Devise } from '@prisma/client';
+import { MemberFinanceService } from './member-finance.service';
 
 @Injectable()
 export class MembersService {
   private readonly logger = new Logger(MembersService.name);
   constructor(
     private prisma: PrismaService,
-    private notificationsService: NotificationsService
+    private notificationsService: NotificationsService,
+    private financeService: MemberFinanceService
   ) { }
 
   private readonly uploadsDir = path.join(process.cwd(), 'uploads');
@@ -58,7 +61,7 @@ export class MembersService {
     else if (imageType.includes('gif')) extension = 'gif';
     else if (imageType.includes('jpeg')) extension = 'jpg';
 
-    const fileName = `${prefix}_${Date.now()}.${extension}`;
+    const fileName = `${prefix}_${randomUUID()}.${extension}`;
     fs.writeFileSync(path.join(this.uploadsDir, fileName), buffer);
 
     return fileName;
@@ -105,12 +108,25 @@ export class MembersService {
     };
   }
 
-  async findOne(id: number) {
+  /**
+   * Trouve un membre par son ID unique ou son identifiant ZKTeco (userId).
+   */
+  async findOne(idOrZkId: number | string) {
+    const isId = typeof idOrZkId === 'number' || !isNaN(Number(idOrZkId));
+    const where = isId ? { id: Number(idOrZkId) } : { userId: String(idOrZkId) };
+
     const membre = await this.prisma.membre.findUnique({
-      where: { id },
+      where: where as any,
       include: { delegues: true },
     });
-    if (!membre) throw new NotFoundException('Membre non trouvé');
+
+    if (!membre) {
+      if (!isId) {
+        // Fallback pour chercher par ZKId si findUnique ne suffit pas (userId n'est pas @unique dans schema)
+        return this.findByZkId(String(idOrZkId));
+      }
+      throw new NotFoundException('Membre non trouvé');
+    }
     return membre;
   }
 
@@ -245,13 +261,26 @@ export class MembersService {
           },
         });
 
+        // OUVERTURE AUTOMATIQUE DU COMPTE D'ÉPARGNE PERSONNEL
+        // Indispensable pour l'intégrité des données financières du membre
+        await tx.compteEpargne.create({
+          data: {
+            numeroCompte: finalNumeroCompte,
+            typeCompte: typeNormalise,
+            solde: 0,
+            statut: 'actif',
+          },
+        });
+
         // Enregistrer le revenu d'Adhésion (2000 FC) dans la table Revenu
         const revType = await tx.revenuType.findFirst({
           where: { nom: 'Système Membre' },
         });
 
         if (revType) {
-          // 1. Enregistrement dans la table Revenu (Nouvelle architecture)
+          // ENREGISTREMENT DU REVENU (Comptabilité de la coopérative)
+          // La somme de 2000 FC est enregistrée comme un revenu lié au type de compte.
+          // Le solde global des revenus sera calculé à partir de cette table.
           await tx.revenu.create({
             data: {
               typeCompte: typeNormalise,
@@ -260,33 +289,6 @@ export class MembersService {
               devise: Devise.FC,
               dateOperation: new Date(dateAdhesion),
               sourceCompte: finalNumeroCompte,
-            },
-          });
-
-          // 2. Enregistrement sur le compte de REVENUS de la section
-          const sectionTrigram = getSectionTrigram(typeNormalise);
-          const revenueAccount = `MW-${sectionTrigram}-REVENUS`;
-
-          await tx.epargne.create({
-            data: {
-              compte: revenueAccount,
-              typeOperation: 'depot',
-              devise: Devise.FC,
-              montant: 2000,
-              dateOperation: new Date(dateAdhesion),
-              description: `Frais d'adhésion membre ${finalNumeroCompte}`,
-            },
-          });
-
-          // 3. Enregistrement sur le compte REVENUS GLOBAL
-          await tx.epargne.create({
-            data: {
-              compte: 'MW-REVENUS-GLOBAL',
-              typeOperation: 'depot',
-              devise: Devise.FC,
-              montant: 2000,
-              dateOperation: new Date(dateAdhesion),
-              description: `Frais d'adhésion membre ${finalNumeroCompte} (via ${typeNormalise})`,
             },
           });
         }
@@ -416,11 +418,7 @@ export class MembersService {
     const data: Prisma.MembreUpdateInput = {};
 
     if (updateDto.motDePasse) {
-      if (!updateDto.motDePasse.startsWith('$2')) {
-        data.motDePasse = await bcrypt.hash(updateDto.motDePasse, 10);
-      } else {
-        data.motDePasse = updateDto.motDePasse;
-      }
+      data.motDePasse = await bcrypt.hash(updateDto.motDePasse, 10);
     }
 
     if (updateDto.nomComplet) data.nomComplet = updateDto.nomComplet;
@@ -515,7 +513,8 @@ export class MembersService {
       include: {
         epargnes: { take: 1 },
         retraits: { take: 1 },
-        credits: { take: 1 }
+        credits: { take: 1 },
+        comptesEpargne: true
       }
     });
 
@@ -546,41 +545,21 @@ export class MembersService {
       if (fs.existsSync(photoPath)) fs.unlinkSync(photoPath);
     }
 
-    // Supprimer les délégués associés (pris en charge par cascade si configuré, mais on le fait pour être sûr)
-    await this.prisma.delegue.deleteMany({ where: { membreId: id } });
+    // Supprimer les données liées dans une transaction pour garantir l'intégrité
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Supprimer les délégués
+      await tx.delegue.deleteMany({ where: { membreId: id } });
 
-    return this.prisma.membre.delete({ where: { id } });
+      // 2. Supprimer les comptes d'épargne (balances) associés
+      await tx.compteEpargne.deleteMany({ where: { numeroCompte: membre.numeroCompte } });
+
+      // 3. Supprimer le membre final
+      return tx.membre.delete({ where: { id } });
+    });
   }
 
   async getStats() {
-    const filter = {
-      NOT: [
-        { numeroCompte: { contains: 'SECTION-0000' } },
-        { numeroCompte: { contains: 'REVENUS' } },
-        { numeroCompte: { contains: 'CREDITS' } },
-        { numeroCompte: { contains: 'TRESORERIE' } },
-      ],
-    };
-
-    const total = await this.prisma.membre.count({ where: filter });
-    const actifs = await this.prisma.membre.count({
-      where: { ...filter, statut: PrismaStatutMembre.actif },
-    });
-    const inactifs = total - actifs;
-    const hommes = await this.prisma.membre.count({
-      where: { ...filter, sexe: 'M' },
-    });
-    const femmes = await this.prisma.membre.count({
-      where: { ...filter, sexe: 'F' },
-    });
-
-    const typeComptes = await this.prisma.membre.groupBy({
-      by: ['typeCompte'],
-      where: filter,
-      _count: { _all: true },
-    });
-
-    return { total, actifs, inactifs, hommes, femmes, typeComptes };
+    return this.financeService.getStats();
   }
 
   async checkUserId(userId: string, excludeId?: number) {
@@ -638,6 +617,10 @@ export class MembersService {
       throw new BadRequestException('Veuillez changer votre mot de passe pour accéder à votre tableau de bord');
     }
 
+    // Déléguer les calculs financiers complexes au MemberFinanceService
+    const balances = this.financeService.calculateBalances(membre);
+    const monthlyHistory = this.financeService.generateMonthlyHistory(membre);
+
     // Mettre à plat et trier les transactions récentes interactives
     const allTransactions = [
       ...membre.epargnes
@@ -650,93 +633,25 @@ export class MembersService {
       )
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    // Calculs de l'épargne (dépôts - retraits)
-    const epargneUSD = 
-      membre.epargnes.filter(e => e.devise === Devise.USD && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant), 0) -
-      membre.retraits.filter(r => r.devise === Devise.USD).reduce((sum, r) => sum + Number(r.montant) + Number(r.frais), 0);
-
-    const epargneFC = 
-      membre.epargnes.filter(e => e.devise === Devise.FC && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant), 0) -
-      membre.retraits.filter(r => r.devise === Devise.FC).reduce((sum, r) => sum + Number(r.montant) + Number(r.frais), 0);
-
-    // Filter active credits
-    const activeCredits = membre.credits.filter(c => c.statut === PrismaStatutMembre.actif || c.statut === 'en_retard');
-
-    const unpaidCreditsUSD = activeCredits
-      .filter(c => c.devise === Devise.USD)
-      .reduce((sum, c) => sum + (Number(c.montant) * (1 + Number(c.tauxInteret) / 100) - Number(c.montantRembourse)), 0);
-
-    const unpaidCreditsFC = activeCredits
-      .filter(c => c.devise === Devise.FC)
-      .reduce((sum, c) => sum + (Number(c.montant) * (1 + Number(c.tauxInteret) / 100) - Number(c.montantRembourse)), 0);
-
-    // Format Credits Details for the UI
-    const creditsDetails = activeCredits.map(c => {
-      const montantTotal = Number(c.montant) * (1 + Number(c.tauxInteret) / 100);
-      const rembourse = Number(c.montantRembourse);
-      return {
-        id: c.id,
-        montantInitial: Number(c.montant),
-        montantTotal: montantTotal,
-        montantRembourse: rembourse,
-        restant: Math.max(0, montantTotal - rembourse),
-        tauxInteret: Number(c.tauxInteret),
-        devise: c.devise,
-        dateDebut: c.dateDebut,
-        statut: c.statut,
-        progression: montantTotal > 0 ? (rembourse / montantTotal) * 100 : 0
-      };
-    });
-
-    // Calculer l'épargne cumulée (Total dépôts de tous les temps)
-    const cumulativeUSD = membre.epargnes.filter(e => e.devise === Devise.USD && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant), 0);
-    const cumulativeFC = membre.epargnes.filter(e => e.devise === Devise.FC && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant), 0);
-
-    // Calculer l'évolution sur les 6 derniers mois
-    const months: any[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date();
-      d.setMonth(d.getMonth() - i);
-      const year = d.getFullYear();
-      const month = d.getMonth();
-      const label = d.toLocaleDateString('fr-FR', { month: 'short' });
-
-      const monthEpargne = membre.epargnes
-        .filter(e => {
-          const ed = new Date(e.dateOperation);
-          return ed.getFullYear() === year && ed.getMonth() === month && e.typeOperation === 'depot';
-        })
-        .reduce((sum, e) => sum + Number(e.montant) * (e.devise === 'FC' ? 0.0004 : 1), 0);
-
-      const monthRetrait = membre.retraits
-        .filter(r => {
-          const rd = new Date(r.dateOperation);
-          return rd.getFullYear() === year && rd.getMonth() === month;
-        })
-        .reduce((sum, r) => sum + Number(r.montant) * (r.devise === 'FC' ? 0.0004 : 1), 0);
-
-      const monthCredit = membre.credits
-        .filter(c => {
-          const cd = new Date(c.dateDebut);
-          return cd.getFullYear() === year && cd.getMonth() === month;
-        })
-        .reduce((sum, c) => sum + Number(c.montant) * (c.devise === 'FC' ? 0.0004 : 1), 0);
-
-      const monthRemboursement = membre.credits.flatMap(c => c.remboursements)
-        .filter(r => {
-          const rd = new Date(r.dateRemboursement);
-          return rd.getFullYear() === year && rd.getMonth() === month;
-        })
-        .reduce((sum, r) => sum + Number(r.montant) * (r.devise === 'FC' ? 0.0004 : 1), 0);
-
-      months.push({
-        name: label,
-        epargne: monthEpargne,
-        retrait: monthRetrait,
-        credit: monthCredit,
-        remboursement: monthRemboursement
+    // Format Credits Details pour l'UI
+    const activeCreditsDetails = membre.credits
+      .filter(c => c.statut === PrismaStatutMembre.actif || c.statut === 'en_retard')
+      .map(c => {
+        const montantTotal = Number(c.montant) * (1 + Number(c.tauxInteret) / 100);
+        const rembourse = Number(c.montantRembourse);
+        return {
+          id: c.id,
+          montantInitial: Number(c.montant),
+          montantTotal: montantTotal,
+          montantRembourse: rembourse,
+          restant: Math.max(0, montantTotal - rembourse),
+          tauxInteret: Number(c.tauxInteret),
+          devise: c.devise,
+          dateDebut: c.dateDebut,
+          statut: c.statut,
+          progression: montantTotal > 0 ? (rembourse / montantTotal) * 100 : 0
+        };
       });
-    }
 
     return {
       profile: {
@@ -748,22 +663,9 @@ export class MembersService {
         dateAdhesion: membre.dateAdhesion,
         photoProfil: membre.photoProfil
       },
-      balances: {
-        savings: {
-          USD: epargneUSD,
-          FC: epargneFC
-        },
-        activeCredits: {
-          USD: unpaidCreditsUSD,
-          FC: unpaidCreditsFC
-        },
-        cumulative: {
-          USD: cumulativeUSD,
-          FC: cumulativeFC
-        }
-      },
-      monthlyHistory: months,
-      activeCreditsDetails: creditsDetails,
+      balances,
+      monthlyHistory,
+      activeCreditsDetails,
       recentTransactions: allTransactions.slice(0, 15)
     };
   }

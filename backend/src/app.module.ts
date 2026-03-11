@@ -18,6 +18,9 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AccountingModule } from './accounting/accounting.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { ThrottlerModule, ThrottlerGuard, seconds } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -40,8 +43,22 @@ import { AccountingModule } from './accounting/accounting.module';
     }),
     NotificationsModule,
     AccountingModule,
+    ThrottlerModule.forRoot([{
+      ttl: seconds(60),
+      limit: 10,
+    }]),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule { }

@@ -1,0 +1,69 @@
+### VARIABLES
+@host = http://localhost:3000
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MywiZW1haWwiOiJhZG1pbkBtd2FuZ2F6YS5jZCIsIm51bWVyb19jb21wdGUiOm51bGwsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc3MzI2NDc0OSwiZXhwIjoxNzczMjkzNTQ5fQ.1AtfSLX8Ci0HkQTH-qJF5Que1sgvZH5LHHa1oZW3Cbk
+@membreToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjMsImVtYWlsIjoianAua2FiYW5ndUBleGFtcGxlLmNvbSIsIm51bWVyb19jb21wdGUiOiJNVy1FUEEtNVFBN1ZRIiwicm9sZSI6Im1lbWJyZSIsImlhdCI6MTc3MzI2NTk2OCwiZXhwIjoxNzczMjk0NzY4fQ.FQVp2dA8mbF1epAO9VMXvx-kXAsBuy52WSuBe3S1QHM
+
+### Création d'un Nouveau Membre (ADMIN)
+# Ce test nécessite un Bearer Token valide d'un administrateur
+POST {{host}}/api/membres
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "nomComplet": "Jean-Pierre Kabangu",
+    "email": "janisse@gmai.com",
+    "telephone": "+243812345676",
+    "adresse": "Q/Himbi, Goma, RDC",
+    "sexe": "M",
+    "typeCompte": "Epargne à Vue",
+    "statut": "actif",
+    "dateAdhesion": "2024-03-11T12:00:00Z",
+    "idNationale": "1234567890",
+    "motDePasse": "Pass1235",
+    "delegue": {
+        "nom": "Marie Kabangula",
+        "telephone": "+243822345674",
+        "relation": "Conjoint"
+    }
+}
+
+### 1. Changement de Mot de Passe Initial
+# Nécessaire pour débloquer le dashboard
+POST {{host}}/api/auth/membre/change-password
+Content-Type: application/json
+
+{
+    "numeroCompte": "MW-EPA-BCGHF6",
+    "newPassword": "NewPassword123"
+}
+### Liste des Membres (Protégé)
+GET {{host}}/api/membres
+Authorization: Bearer {{adminToken}}
+ 
+### Dashboard d'un Membre
+# Rejeté (400) si firstAcces est true (cas des nouveaux membres)
+GET {{host}}/api/membres/dashboard/MW-EPA-BCGHF6
+Authorization: Bearer {{membreToken}}
+
+### 1. Changement de Mot de Passe Initial
+# Nécessaire pour débloquer le dashboard
+
+
+### 2. Mise à jour d'un Membre (ADMIN)
+PUT {{host}}/api/membres/24
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+    "adresse": "Q/Kyeshero, Goma, RDC",
+    "statut": "actif"
+}
+
+### 3. Statistiques des Membres (ADMIN/PROTÉGÉ)
+GET {{host}}/api/membres/stats
+Authorization: Bearer {{adminToken}}
+
+### 4. Suppression d'un Membre (ADMIN)
+# ATTENTION : Action destructrice
+DELETE {{host}}/api/membres/24
+Authorization: Bearer {{adminToken}}

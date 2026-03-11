@@ -8,12 +8,19 @@ import {
   Delete,
   Query,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { MembersService } from './members.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { getSectionLetter, normalizeSectionName } from '../common/constants/sections';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ThrottlerGuard } from '@nestjs/throttler';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
 
 @Controller('api/membres')
+@UseGuards(JwtAuthGuard, ThrottlerGuard, RolesGuard)
 export class MembersController {
   constructor(private readonly membersService: MembersService) {}
 
@@ -99,11 +106,13 @@ export class MembersController {
   }
 
   @Post()
+  @Roles(Role.ADMIN)
   async create(@Body() createMemberDto: CreateMemberDto) {
     return this.membersService.create(createMemberDto);
   }
 
   @Put(':id')
+  @Roles(Role.ADMIN)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDto: Partial<CreateMemberDto>,
@@ -112,6 +121,7 @@ export class MembersController {
   }
 
   @Delete(':id')
+  @Roles(Role.ADMIN)
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.membersService.remove(id);
   }

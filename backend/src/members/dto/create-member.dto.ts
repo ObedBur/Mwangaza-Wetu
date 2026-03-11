@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -27,6 +28,9 @@ export class CreateDelegueDto {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(/^(?:\+243|0)[1-9]\d{8}$/, {
+    message: 'Le numéro de téléphone du délégué doit être au format RDC (+243...) ou local (0...)',
+  })
   telephone: string;
 
   @IsString()
@@ -61,6 +65,9 @@ export class CreateMemberDto {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(/^(?:\+243|0)[1-9]\d{8}$/, {
+    message: 'Le numéro de téléphone doit être au format RDC (+243...) ou local (0...)',
+  })
   telephone: string;
 
   @IsEmail()
