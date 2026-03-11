@@ -51,8 +51,9 @@ export const useAdminNotifications = (adminId?: number) => {
     unreadCount: unreadQuery.data?.count || 0,
     isLoading: query.isLoading,
     isError: query.isError,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
+    markAsRead: markAsRead.mutate,
+    markAllAsRead: markAllAsRead.mutate,
+    deleteNotification: deleteNotification.mutate,
+    isMarkingAll: markAllAsRead.isPending,
   };
 };

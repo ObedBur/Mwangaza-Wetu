@@ -148,7 +148,7 @@ export default function NotificationBell({
 
   // Consolider les données selon le contexte actif
   const context = adminId ? adminContext : memberContext;
-  
+
   const {
     notifications,
     unreadCount,
@@ -156,7 +156,7 @@ export default function NotificationBell({
     markAllAsRead,
     deleteNotification,
   } = context;
-  
+
   // "isMarkingAll" n'est disponible que dans useNotifications, on utilise un fallback
   const isMarkingAll = !adminId && 'isMarkingAll' in context ? (context as any).isMarkingAll : false;
 
@@ -185,10 +185,9 @@ export default function NotificationBell({
         ref={btnRef}
         onClick={() => setOpen((v) => !v)}
         className={`w-10 h-10 rounded-2xl bg-white dark:bg-[#0F172A] border flex items-center justify-center transition-all shadow-sm relative
-          ${
-            open
-              ? "border-indigo-400 text-indigo-600 shadow-indigo-200 dark:shadow-indigo-500/10"
-              : "border-slate-100 dark:border-white/5 text-[#64748B] hover:text-indigo-600"
+          ${open
+            ? "border-indigo-400 text-indigo-600 shadow-indigo-200 dark:shadow-indigo-500/10"
+            : "border-slate-100 dark:border-white/5 text-[#64748B] hover:text-indigo-600"
           }`}
         aria-label="Notifications"
       >
@@ -264,11 +263,11 @@ export default function NotificationBell({
             )}
           </div>
 
-          {/* Footer - Seulement pour les membres (lien vers page dédiée) */}
-          {notifications.length > 0 && membreNumero && !adminId && (
+          {/* Footer - Lien vers la page dédiée */}
+          {notifications.length > 0 && (membreNumero || adminId) && (
             <div className="border-t border-slate-100 dark:border-white/5 p-2.5">
               <Link
-                href={`/portal/${encodeURIComponent(membreNumero)}/notifications`}
+                href={adminId ? `/dashboard/notifications` : `/portal/${encodeURIComponent(membreNumero!)}/notifications`}
                 onClick={() => setOpen(false)}
                 className="block w-full text-center text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 py-1.5 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all"
               >

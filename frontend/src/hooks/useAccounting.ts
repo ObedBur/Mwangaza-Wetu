@@ -17,20 +17,18 @@ export interface FetchAccountingParams {
   search?: string;
 }
 
-// TODO: Remplacer par API_ROUTES.ACCOUNTING quand le backend sera prêt
-const TEMP_ACCOUNTING_ROUTE = '/accounting';
+// Route réelle du backend
+const ACCOUNTING_ROUTE = '/accounting';
 
 const fetchAccounting = async (params: FetchAccountingParams): Promise<PaginatedResponse<AccountingEntry>> => {
-  console.warn('[DEV] useAccounting: route backend /accounting non implémentée');
-  const { data } = await apiClient.get<PaginatedResponse<AccountingEntry>>(TEMP_ACCOUNTING_ROUTE, {
+  const { data } = await apiClient.get<PaginatedResponse<AccountingEntry>>(ACCOUNTING_ROUTE, {
     params
   });
   return data;
 };
 
 const createAccountingEntry = async (payload: AccountingInput): Promise<AccountingEntry> => {
-  console.warn('[DEV] useCreateAccountingEntry: route backend /accounting non implémentée');
-  const { data } = await apiClient.post<AccountingEntry>(TEMP_ACCOUNTING_ROUTE, payload);
+  const { data } = await apiClient.post<AccountingEntry>(ACCOUNTING_ROUTE, payload);
   return data;
 };
 

@@ -17,6 +17,7 @@ import { ZktecoModule } from './zkteco/zkteco.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AccountingModule } from './accounting/accounting.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { NotificationsModule } from './notifications/notifications.module';
       serveRoot: '/uploads',
     }),
     NotificationsModule,
+    AccountingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
