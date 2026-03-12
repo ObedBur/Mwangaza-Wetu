@@ -96,7 +96,7 @@ export class CreateMemberDto {
 
   @IsString()
   @IsOptional()
-  @MinLength(4)
+  @MinLength(6, { message: 'Le mot de passe doit contenir au moins 6 caractères' })
   motDePasse?: string;
 
   @IsString()

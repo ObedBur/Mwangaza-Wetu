@@ -184,6 +184,18 @@ export class SavingsService {
       }
     }
 
+    // Validation du solde pour les retraits
+    if (typeOperation === TypeOperation.retrait) {
+      const soldes = await this.getSoldes(createDto.compte);
+      const soldeActuel = (devise as unknown as Devise) === Devise.FC ? soldes.soldeFC : soldes.soldeUSD;
+      
+      if (montant > soldeActuel) {
+        throw new BadRequestException(
+          `Solde insuffisant pour ce retrait. Solde actuel : ${soldeActuel} ${devise}`,
+        );
+      }
+    }
+
     const epargne = await this.prisma.epargne.create({
       data: {
         compte: createDto.compte,
@@ -196,8 +208,24 @@ export class SavingsService {
       },
     });
 
-    // Notifier les administrateurs
     const operationName = createDto.typeOperation === TypeOperation.depot ? 'Dépôt' : 'Retrait (Épargne)';
+
+    // Notifier le membre concerné
+    const membre = await this.prisma.membre.findUnique({
+      where: { numeroCompte: createDto.compte }
+    });
+    
+    if (membre) {
+      const typeStr = createDto.typeOperation === TypeOperation.depot ? 'crédité' : 'débité';
+      await this.notificationsService.create({
+        membreId: membre.id,
+        titre: `Nouveau ${operationName}`,
+        message: `Votre compte ${createDto.compte} a été ${typeStr} de ${createDto.montant} ${createDto.devise}.`,
+        type: 'epargne'
+      });
+    }
+
+    // Notifier les administrateurs
     await this.notificationsService.notifyAllAdmins(
       `Nouveau ${operationName}`,
       `Un ${operationName.toLowerCase()} de ${createDto.montant} ${createDto.devise} a été effectué sur le compte ${createDto.compte}.`,

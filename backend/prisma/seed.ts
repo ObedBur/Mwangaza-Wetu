@@ -11,14 +11,11 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-
 async function main() {
     console.log('🌱 Start seeding...');
 
-    // Hacher le mot de passe pour le super admin
+    // 1. GESTION DES ADMINISTRATEURS
     const hashedSuperAdminPassword = await bcrypt.hash('Admin@2026', 10);
-
-    // Création du Super Admin
     const superAdmin = await prisma.administrateur.upsert({
         where: { email: 'superadmin@mwangaza.cd' },
         update: {},
@@ -35,10 +32,7 @@ async function main() {
     });
     console.log(`✅ Super Admin created: ${superAdmin.email}`);
 
-    // Hacher le mot de passe pour un admin standard
     const hashedAdminPassword = await bcrypt.hash('Admin@123', 10);
-
-    // Création d'un Admin standard
     const admin = await prisma.administrateur.upsert({
         where: { email: 'admin@mwangaza.cd' },
         update: {},
@@ -55,7 +49,7 @@ async function main() {
     });
     console.log(`✅ Admin created: ${admin.email}`);
 
-    // --- INITIALISATION DES SECTIONS ET COMPTES SYSTÈME ---
+    // 2. INITIALISATION DES SECTIONS ET COMPTES SYSTÈME
     console.log('🔄 Initialisation des sections et comptes système...');
     const sections = [
         { nom: 'PRINCIPAL', code: 'PRI' },
@@ -70,8 +64,9 @@ async function main() {
         const sectionTrigram = sec.code;
         const compteCollectif = `MW-${sectionTrigram}-SECTION-0000`;
         const revenueAccount = `MW-${sectionTrigram}-REVENUS`;
+        const creditAccount = `MW-${sectionTrigram}-CREDITS`;
 
-        // 1. Créer/Mettre à jour la Section
+        // Créer/Mettre à jour la Section
         await prisma.section.upsert({
             where: { nom: sec.nom },
             update: { numeroCompte: compteCollectif },
@@ -82,7 +77,7 @@ async function main() {
             },
         });
 
-        // 2. Créer le compte Membre lié au collectif
+        // Créer le compte Membre lié au collectif (Téléphone unique SYS-)
         await prisma.membre.upsert({
             where: { numeroCompte: compteCollectif },
             update: {},
@@ -90,13 +85,13 @@ async function main() {
                 numeroCompte: compteCollectif,
                 nomComplet: `Compte Collectif ${sec.nom}`,
                 typeCompte: sec.nom,
-                telephone: '000000',
+                telephone: `SYS-${compteCollectif}`,
                 dateAdhesion: new Date(),
                 statut: 'actif',
             }
         });
 
-        // 3. Créer le compte de REVENUS de la section
+        // Créer le compte de REVENUS de la section
         await prisma.membre.upsert({
             where: { numeroCompte: revenueAccount },
             update: {},
@@ -104,14 +99,13 @@ async function main() {
                 numeroCompte: revenueAccount,
                 nomComplet: `REVENUS ${sec.nom}`,
                 typeCompte: sec.nom,
-                telephone: '000000',
+                telephone: `SYS-${revenueAccount}`,
                 dateAdhesion: new Date(),
                 statut: 'actif',
             }
         });
 
-        // 4. Créer le compte de CRÉDITS (transit trésorerie) de la section
-        const creditAccount = `MW-${sectionTrigram}-CREDITS`;
+        // Créer le compte de CRÉDITS (transit trésorerie) de la section
         await prisma.membre.upsert({
             where: { numeroCompte: creditAccount },
             update: {},
@@ -119,16 +113,16 @@ async function main() {
                 numeroCompte: creditAccount,
                 nomComplet: `CRÉDITS ${sec.nom}`,
                 typeCompte: sec.nom,
-                telephone: '000000',
+                telephone: `SYS-${creditAccount}`,
                 dateAdhesion: new Date(),
                 statut: 'actif',
             }
         });
 
-        console.log(`✅ Section ${sec.nom} prête (Collectif: ${compteCollectif}, Revenus: ${revenueAccount}, Crédits: ${creditAccount})`);
+        console.log(`✅ Section ${sec.nom} prête.`);
     }
 
-    // --- INITIALISATION DES TYPES DE REVENUS ---
+    // 3. INITIALISATION DES TYPES DE REVENUS
     console.log('🔄 Initialisation des types de revenus...');
     const revenueTypes = [
         { nom: 'Système Membre', description: 'Revenus issus des frais d\'adhésion et de gestion des membres' },
@@ -147,9 +141,8 @@ async function main() {
             },
         });
     }
-    console.log('✅ Types de revenus prêts.');
 
-    // Création du compte GLOBAL CONSOLIDÉ (REVENUS)
+    // 4. COMPTES GLOBAUX CONSOLIDÉS
     await prisma.membre.upsert({
         where: { numeroCompte: 'MW-REVENUS-GLOBAL' },
         update: {},
@@ -157,13 +150,12 @@ async function main() {
             numeroCompte: 'MW-REVENUS-GLOBAL',
             nomComplet: 'REVENUS GLOBAL CONSOLIDÉ',
             typeCompte: 'SYSTEME',
-            telephone: '000000',
+            telephone: 'SYS-REV-GLOBAL',
             dateAdhesion: new Date(),
             statut: 'actif'
         }
     });
 
-    // Création du compte GLOBAL TRÉSORERIE CRÉDITS
     await prisma.membre.upsert({
         where: { numeroCompte: 'MW-TRESORERIE-CREDITS' },
         update: {},
@@ -171,14 +163,13 @@ async function main() {
             numeroCompte: 'MW-TRESORERIE-CREDITS',
             nomComplet: 'TRÉSORERIE CRÉDITS GLOBAL',
             typeCompte: 'SYSTEME',
-            telephone: '000000',
+            telephone: 'SYS-TRES-CREDITS',
             dateAdhesion: new Date(),
             statut: 'actif'
         }
     });
 
     console.log('✅ Tous les comptes système sont prêts.');
-
     console.log('🏁 Seeding finished.');
 }
 

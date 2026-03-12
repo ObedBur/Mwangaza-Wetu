@@ -16,6 +16,13 @@ export class NotificationsService {
     });
   }
 
+  /** Récupère une notification par son ID */
+  async findById(id: number) {
+    return this.prisma.notification.findUnique({
+      where: { id },
+    });
+  }
+
   /** Compte les notifications non lues d'un membre */
   async countUnread(membreId: number): Promise<{ count: number }> {
     const count = await this.prisma.notification.count({

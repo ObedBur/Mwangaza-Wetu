@@ -208,8 +208,8 @@ describe('NotificationsService', () => {
       });
       expect(prisma.notification.createMany).toHaveBeenCalledWith({
         data: [
-          { adminId: 1, titre: 'Global', message: 'Message', type: 'info' },
-          { adminId: 2, titre: 'Global', message: 'Message', type: 'info' }
+          { adminId: 1, membreId: null, titre: 'Global', message: 'Message', type: 'info' },
+          { adminId: 2, membreId: null, titre: 'Global', message: 'Message', type: 'info' }
         ]
       });
       expect(result).toEqual({ notified: 2 });

@@ -1,18 +1,41 @@
-import { Controller, Get, Post, Body, Param, ValidationPipe, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  ValidationPipe,
+  Query,
+  UseGuards,
+  Req,
+  ForbiddenException,
+  ParseIntPipe,
+  BadRequestException,
+} from '@nestjs/common';
 import { WithdrawalsService } from './withdrawals.service';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
+import { VerifyLimitDto } from './dto/verify-limit.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Retraits')
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/withdrawals')
 export class WithdrawalsController {
-  constructor(private readonly withdrawalsService: WithdrawalsService) {}
+  constructor(private readonly withdrawalsService: WithdrawalsService) { }
 
   @Get()
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
   async findAll(
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
+    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
+    @Query('pageSize', new ParseIntPipe({ optional: true })) pageSize?: number,
   ) {
-    const pageNum = page ? parseInt(page) : 1;
-    const pageSizeNum = pageSize ? parseInt(pageSize) : 10;
+    const pageNum = page || 1;
+    const pageSizeNum = pageSize || 10;
     const retraits = await this.withdrawalsService.findAll();
 
     // Appliquer la pagination manuellement côté contrôleur
@@ -33,26 +56,57 @@ export class WithdrawalsController {
   }
 
   @Get('compte/:compte')
-  async findByCompte(@Param('compte') compte: string) {
+  async findByCompte(@Param('compte') compte: string, @Req() req: any) {
+    const user = req.user;
+    if (user.role === 'membre' && user.numeroCompte !== compte) {
+      throw new ForbiddenException(
+        'Vous ne pouvez consulter que vos propres retraits.',
+      );
+    }
     const retraits = await this.withdrawalsService.findByCompte(compte);
     return this.mapRetraitsToResponse(retraits);
   }
 
   @Post('verify-limites')
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
   async verify(
-    @Body(new ValidationPipe({ whitelist: true })) body: { compte: string; montant: number; devise: string },
+    @Body(new ValidationPipe({ whitelist: true, transform: true }))
+    dto: VerifyLimitDto,
   ) {
-    return this.withdrawalsService.verifyLimites(
-      body.compte,
-      body.montant,
-      body.devise,
-    );
+    // 1. Vérification de sécurité immédiate (Anti-crash)
+    if (!dto || !dto.compte) {
+      throw new BadRequestException(
+        'Les informations de compte et de montant sont obligatoires',
+      );
+    }
+
+    try {
+      // 2. Appel au service avec capture d'erreurs métier
+      return await this.withdrawalsService.verifyLimites(
+        dto.compte,
+        dto.montant,
+        dto.devise,
+      );
+    } catch (error) {
+      // 
+      throw new BadRequestException(error.message || 'Erreur lors de la vérification des limites');
+    }
   }
 
   @Post()
-  async create(@Body(new ValidationPipe({ whitelist: true })) dto: CreateWithdrawalDto) {
-    const retrait = await this.withdrawalsService.create(dto);
-    return this.mapRetraitToResponse(retrait);
+  @Roles(Role.ADMIN, Role.SUPERADMIN)
+  async create(
+    @Body(new ValidationPipe({ whitelist: true })) dto: CreateWithdrawalDto,
+    @Req() req: any,
+  ) {
+    try {
+      const retrait = await this.withdrawalsService.create(dto, req.user.id);
+      return this.mapRetraitToResponse(retrait);
+    } catch (error) {
+      throw new BadRequestException(
+        error.message || 'Erreur lors de la création du retrait',
+      );
+    }
   }
 
   // ─── Mappage privé pour transformer les données ─────────────────

@@ -9,5 +9,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [ParametresModule, NotificationsModule, PrismaModule],
   providers: [SavingsService],
   controllers: [SavingsController],
+  exports: [SavingsService]
 })
 export class SavingsModule {}

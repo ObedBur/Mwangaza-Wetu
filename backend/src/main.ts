@@ -1,12 +1,18 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
 import { join } from 'path';
 import * as fs from 'fs';
+import helmet from 'helmet';
+import { BenchInterceptor } from './common/interceptors/bench.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  //  Sécurité HTTP — en-têtes de protection (HSTS, X-Frame-Options, etc.)
+  app.use(helmet());
 
   // Augmenter la limite de taille pour les photos et empreintes (Base64)
   app.use(json({ limit: '50mb' }));
@@ -37,6 +43,30 @@ async function bootstrap() {
       transform: true,       // Convertit automatiquement les types (string → number, etc.)
     }),
   );
+
+  // 🔬 Intercepteur de latence — affiche le temps de traitement de chaque requête
+  app.useGlobalInterceptors(new BenchInterceptor());
+
+  // 📝 Configuration Swagger (Documentation API)
+  const config = new DocumentBuilder()
+    .setTitle('Mwangaza Wetu API')
+    .setDescription('Documentation officielle de l\'API Mwangaza Wetu - Système de gestion coopérative.')
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Entrez votre token JWT',
+        in: 'header',
+      },
+      'JWT-auth', // Identifiant interne pour @ApiBearerAuth()
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);

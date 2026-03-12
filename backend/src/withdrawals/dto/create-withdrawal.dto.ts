@@ -1,13 +1,14 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, IsEnum } from 'class-validator';
+import { Devise } from '@prisma/client';
 
 export class CreateWithdrawalDto {
   @IsString()
   @IsNotEmpty()
   compte: string;
 
-  @IsString()
+  @IsEnum(Devise)
   @IsNotEmpty()
-  devise: string;
+  devise: Devise;
 
   @IsNumber()
   @IsNotEmpty()

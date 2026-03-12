@@ -1,0 +1,110 @@
+### =============================================
+### 🔔 TESTS NOTIFICATIONS — Mwangaza Wetu
+### =============================================
+
+@baseUrl = http://localhost:3000/api
+@adminEmail = admin@mwangaza.cd
+@adminPassword = Admin@123
+@membreCompte = MW-PRI-7JV10I
+@membrePassword = MonNouveauPass@2026
+
+### =============================================
+### 🔑 0. LOGIN
+### =============================================
+
+# @name loginAdmin
+POST {{baseUrl}}/auth/admin/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+###
+@adminToken = {{loginAdmin.response.body.token}}
+@adminId = {{loginAdmin.response.body.user.id}}
+
+# @name loginMembre
+POST {{baseUrl}}/auth/membre/login
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "password": "{{membrePassword}}"
+}
+
+###
+@membreToken = {{loginMembre.response.body.token}}
+@membreId = {{loginMembre.response.body.user.id}}
+
+
+### =============================================
+### 📋 1. CONSULTATION MEMBRE
+### =============================================
+
+### ✅ Membre — Voir ses propres notifications
+GET {{baseUrl}}/notifications/membre/{{membreId}}
+Authorization: Bearer {{membreToken}}
+
+### ✅ Membre — Voir son compteur de non-lus
+GET {{baseUrl}}/notifications/membre/{{membreId}}/unread-count
+Authorization: Bearer {{membreToken}}
+
+### ❌ Membre — Tente de voir les notifs d'un AUTRE (IDOR) — 403 attendu
+GET {{baseUrl}}/notifications/membre/9999
+Authorization: Bearer {{membreToken}}
+
+
+### =============================================
+### 📋 2. CONSULTATION ADMIN
+### =============================================
+
+### ✅ Admin — Voir ses propres notifications
+GET {{baseUrl}}/notifications/admin/{{adminId}}
+Authorization: Bearer {{adminToken}}
+
+### ✅ Admin — Voir son compteur de non-lus
+GET {{baseUrl}}/notifications/admin/{{adminId}}/unread-count
+Authorization: Bearer {{adminToken}}
+
+### ❌ Membre — Tente de voir les notifs Admin — 403 attendu
+GET {{baseUrl}}/notifications/admin/{{adminId}}
+Authorization: Bearer {{membreToken}}
+
+
+### =============================================
+### ✍️ 3. ACTIONS ET MISES À JOUR
+### =============================================
+
+### ✅ Admin — Créer une notification manuelle pour un membre
+# @name createNotif
+POST {{baseUrl}}/notifications
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "membreId": {{membreId}},
+  "titre": "Message de la Direction",
+  "message": "Ceci est un test de notification manuelle.",
+  "type": "info"
+}
+
+###
+@notifId = {{createNotif.response.body.id}}
+
+### ✅ Membre — Marquer une notification comme lue
+PATCH {{baseUrl}}/notifications/{{notifId}}/read
+Authorization: Bearer {{membreToken}}
+
+### ✅ Membre — Tout marquer comme lu
+PATCH {{baseUrl}}/notifications/membre/{{membreId}}/read-all
+Authorization: Bearer {{membreToken}}
+
+### ❌ Membre — Tente de supprimer la notification d'un autre — 403 attendu
+DELETE {{baseUrl}}/notifications/1
+Authorization: Bearer {{membreToken}}
+
+### ✅ Admin — Supprimer une notification
+DELETE {{baseUrl}}/notifications/{{notifId}}
+Authorization: Bearer {{adminToken}}

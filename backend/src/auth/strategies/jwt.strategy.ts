@@ -10,10 +10,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private configService: ConfigService,
     private prisma: PrismaService,
   ) {
+    const secret = configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error(
+        'JWT_SECRET non défini ! Ajoutez JWT_SECRET dans votre fichier .env',
+      );
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'defaultSecret',
+      secretOrKey: secret,
     });
   }
 
@@ -27,14 +33,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     // Validation active : vérification de l'état de l'utilisateur en base de données
-    if (payload.role === 'admin') {
+    if (payload.role === 'admin' || payload.role === 'superadmin') {
       const admin = await this.prisma.administrateur.findUnique({
         where: { id: payload.id },
       });
       if (!admin || !admin.actif) {
         throw new UnauthorizedException('Accès administrateur révoqué ou inactif');
       }
-      return { id: admin.id, email: admin.email, role: 'admin' };
+      return { id: admin.id, email: admin.email, role: admin.role };
     } else {
       const membre = await this.prisma.membre.findUnique({
         where: { id: payload.id },

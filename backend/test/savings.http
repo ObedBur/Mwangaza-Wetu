@@ -1,0 +1,186 @@
+### =============================================
+### 💰 TESTS EPARGNE (SAVINGS) — Mwangaza Wetu
+### =============================================
+### Prérequis : lancer d'abord `pnpm start:dev`
+### Plugin : REST Client (VS Code)
+
+### VARIABLES — Adaptez les valeurs selon votre BDD de test
+@baseUrl = http://localhost:3000/api
+@adminEmail = admin@mwangaza.cd
+@adminPassword = Admin@123
+@membreEmail = zawadi@mwangaza.cd
+@membreCompte = MW-PRI-7JV10I
+@membrePassword = MonNouveauPass@2026
+@depotDate = 2026-03-12
+
+### =============================================
+### 🔑 0. LOGIN — Obtenir les tokens
+### =============================================
+
+# @name loginAdmin
+POST {{baseUrl}}/auth/admin/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+###
+@adminToken = {{loginAdmin.response.body.token}}
+
+# @name loginMembre
+POST {{baseUrl}}/auth/membre/login
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "password": "{{membrePassword}}"
+}
+
+###
+@membreToken = {{loginMembre.response.body.token}}
+
+
+### =============================================
+### 📋 1. LISTE DES TRANSACTIONS (Paginé)
+### =============================================
+
+### ✅ Admin — Voir toutes les transactions d'épargne
+GET {{baseUrl}}/epargnes?page=1&pageSize=5
+Authorization: Bearer {{adminToken}}
+
+### ✅ Admin — Voir uniquement les Dépôts
+GET {{baseUrl}}/epargnes/depots
+Authorization: Bearer {{adminToken}}
+
+### ✅ Admin — Voir uniquement les Retraits
+GET {{baseUrl}}/epargnes/retraits
+Authorization: Bearer {{adminToken}}
+
+### ❌ Sans Token — 401 attendu
+GET {{baseUrl}}/epargnes
+
+
+### =============================================
+### 💵 2. DÉPÔTS (Admin uniquement)
+### =============================================
+
+### ✅ Créer un Dépôt valide (USD)
+POST {{baseUrl}}/epargnes
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "compte": "{{membreCompte}}",
+  "typeOperation": "depot",
+  "devise": "USD",
+  "montant": 500,
+  "dateOperation": "{{depotDate}}",
+  "description": "Dépôt mensuel test"
+}
+
+### ❌ Créer un Dépôt sous le minimum (< 1 USD) — 400 attendu
+POST {{baseUrl}}/epargnes
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "compte": "{{membreCompte}}",
+  "typeOperation": "depot",
+  "devise": "USD",
+  "montant": 0.5,
+  "dateOperation": "{{depotDate}}"
+}
+
+### ❌ Membre tente de créer un dépôt — 403 attendu
+POST {{baseUrl}}/epargnes
+Authorization: Bearer {{membreToken}}
+Content-Type: application/json
+
+{
+  "compte": "{{membreCompte}}",
+  "typeOperation": "depot",
+  "devise": "USD",
+  "montant": 500,
+  "dateOperation": "{{depotDate}}"
+}
+
+
+### =============================================
+### 📝 3. RETRAITS ET CHECK DE SOLDE
+### =============================================
+
+### ✅ Créer un Retrait valide (si solde > 50)
+POST {{baseUrl}}/epargnes
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "compte": "{{membreCompte}}",
+  "typeOperation": "retrait",
+  "devise": "USD",
+  "montant": 0,
+  "dateOperation": "{{depotDate}}",
+  "description": "Retrait urgent"
+}
+
+### ❌ Créer un Retrait à découvert (> Solde Actuel) — 400 attendu
+POST {{baseUrl}}/epargnes
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "compte": "{{membreCompte}}",
+  "typeOperation": "retrait",
+  "devise": "USD",
+  "montant": 9000000,
+  "dateOperation": "{{depotDate}}"
+}
+
+
+### =============================================
+### 🔍 4. CONSULTATION ET PROTECTION IDOR
+### =============================================
+
+### ✅ Admin — Voir les soldes de X
+GET {{baseUrl}}/epargnes/soldes/{{membreCompte}}
+Authorization: Bearer {{adminToken}}
+
+### ✅ Membre — Voir son PROPRE solde
+GET {{baseUrl}}/epargnes/soldes/{{membreCompte}}
+Authorization: Bearer {{membreToken}}
+
+### ❌ Membre — Tente de voir le solde d'un AUTRE (IDOR) — 403 attendu
+GET {{baseUrl}}/epargnes/soldes/MW-PRI-HACKER01
+Authorization: Bearer {{membreToken}}
+
+### ✅ Membre — Voir ses PROPRES transactions
+GET {{baseUrl}}/epargnes/compte/{{membreCompte}}
+Authorization: Bearer {{membreToken}}
+
+
+### =============================================
+### 📊 5. TOTAUX GLOBAUX (Admin uniquement)
+### =============================================
+
+### ✅ Totaux généraux
+GET {{baseUrl}}/epargnes/totals-all
+Authorization: Bearer {{adminToken}}
+
+### ✅ Totaux par type de section (ex: PRINCIPAL)
+GET {{baseUrl}}/epargnes/by-type/PRINCIPAL
+Authorization: Bearer {{adminToken}}
+
+### ❌ Membre tente de voir les totaux — 403 attendu
+GET {{baseUrl}}/epargnes/totals-all
+Authorization: Bearer {{membreToken}}
+
+
+### =============================================
+### 🗑️ 6. SUPPRESSION (Admin uniquement)
+### =============================================
+
+### ❌ Membre tente de supprimer — 403 attendu
+DELETE {{baseUrl}}/epargnes/1
+Authorization: Bearer {{membreToken}}

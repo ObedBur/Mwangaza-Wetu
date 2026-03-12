@@ -51,19 +51,53 @@ export class MemberFinanceService {
 
   /**
    * Calcule les balances (épargne et crédits) pour un membre spécifique.
+   * Optimisé pour HDD/4GB : Utilise une seule passe sur les données déjà en mémoire.
    */
   calculateBalances(membre: any) {
-    // Calculs de l'épargne (dépôts - retraits)
-    const epargneUSD = 
-      (membre.epargnes || []).filter(e => e.devise === Devise.USD && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant || 0), 0) -
-      (membre.retraits || []).filter(r => r.devise === Devise.USD).reduce((sum, r) => sum + Number(r.montant || 0) + Number(r.frais || 0), 0);
+    let epargneUSD = 0;
+    let epargneFC = 0;
+    let cumulativeUSD = 0;
+    let cumulativeFC = 0;
 
-    const epargneFC = 
-      (membre.epargnes || []).filter(e => e.devise === Devise.FC && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant || 0), 0) -
-      (membre.retraits || []).filter(r => r.devise === Devise.FC).reduce((sum, r) => sum + Number(r.montant || 0) + Number(r.frais || 0), 0);
+    // 1. Traitement unique des mouvements d'épargne (Dépôts [+] et Retraits [-])
+    // On ne filtre plus uniquement par 'depot', on traite les deux.
+    if (membre.epargnes) {
+      for (const e of membre.epargnes) {
+        const montant = Number(e.montant || 0);
+        const estDepot = e.typeOperation === 'depot';
 
-    // Crédits actifs
-    const activeCredits = (membre.credits || []).filter(c => c.statut === 'actif' || c.statut === 'en_retard');
+        if (e.devise === Devise.USD) {
+          if (estDepot) {
+            epargneUSD += montant;
+            cumulativeUSD += montant;
+          } else {
+            epargneUSD -= montant;
+          }
+        } else if (e.devise === Devise.FC) {
+          if (estDepot) {
+            epargneFC += montant;
+            cumulativeFC += montant;
+          } else {
+            epargneFC -= montant;
+          }
+        }
+      }
+    }
+
+    // 2. Déduction des frais de retrait (issus de la table Retraits)
+    // Seuls les FRAIS sont déduits ici car le PRINCIPAL est déjà déduit via Epargne(retrait).
+    if (membre.retraits) {
+      for (const r of membre.retraits) {
+        const frais = Number(r.frais || 0);
+        if (r.devise === Devise.USD) epargneUSD -= frais;
+        else if (r.devise === Devise.FC) epargneFC -= frais;
+      }
+    }
+
+    // 3. Calcul des crédits actifs
+    const activeCredits = (membre.credits || []).filter(c => 
+      c.statut === 'actif' || c.statut === 'en_retard'
+    );
 
     const unpaidCreditsUSD = activeCredits
       .filter(c => c.devise === Devise.USD)
@@ -72,9 +106,6 @@ export class MemberFinanceService {
     const unpaidCreditsFC = activeCredits
       .filter(c => c.devise === Devise.FC)
       .reduce((sum, c) => sum + (Number(c.montant || 0) * (1 + Number(c.tauxInteret || 0) / 100) - Number(c.montantRembourse || 0)), 0);
-
-    const cumulativeUSD = (membre.epargnes || []).filter(e => e.devise === Devise.USD && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant || 0), 0);
-    const cumulativeFC = (membre.epargnes || []).filter(e => e.devise === Devise.FC && e.typeOperation === 'depot').reduce((sum, e) => sum + Number(e.montant || 0), 0);
 
     return {
       savings: { USD: epargneUSD, FC: epargneFC },
@@ -102,12 +133,26 @@ export class MemberFinanceService {
         })
         .reduce((sum, e) => sum + Number(e.montant || 0) * (e.devise === 'FC' ? 0.0004 : 1), 0);
 
-      const monthRetrait = (membre.retraits || [])
+      // Calcul des retraits du mois (Sorties d'argent)
+      // On combine le principal (epargnes type retrait) et les retraits documentés (retraits table)
+      const monthRetraitEpargne = (membre.epargnes || [])
+        .filter(e => {
+          const ed = new Date(e.dateOperation);
+          return ed.getFullYear() === year && ed.getMonth() === month && e.typeOperation === 'retrait';
+        })
+        .reduce((sum, e) => sum + Number(e.montant || 0) * (e.devise === 'FC' ? 0.0004 : 1), 0);
+
+      const monthRetraitTable = (membre.retraits || [])
         .filter(r => {
           const rd = new Date(r.dateOperation);
           return rd.getFullYear() === year && rd.getMonth() === month;
         })
-        .reduce((sum, r) => sum + Number(r.montant || 0) * (r.devise === 'FC' ? 0.0004 : 1), 0);
+        // On ne prend que les frais ici pour éviter les doublons si le principal est déjà dans epargnes
+        // Mais si le retrait n'existe QUE dans la table retraits, on prendrait tout. 
+        // Par sécurité, on suit la logique de calculateBalances : Epargnes(retrait) + Retraits(frais)
+        .reduce((sum, r) => sum + Number(r.frais || 0) * (r.devise === 'FC' ? 0.0004 : 1), 0);
+
+      const monthRetrait = monthRetraitEpargne + monthRetraitTable;
 
       const monthCredit = (membre.credits || [])
         .filter(c => {

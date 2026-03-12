@@ -1,0 +1,286 @@
+### =============================================
+### 🧑‍🤝‍🧑 TESTS MEMBRES — Mwangaza Wetu
+### =============================================
+### Prérequis : lancer d'abord pnpm start:dev
+### Plugin : REST Client (VS Code)
+
+### VARIABLES — Modifier selon votre environnement
+@baseUrl = http://localhost:3000/api
+@adminEmail = admin@mwangaza.cd
+@adminPassword = Admin@123
+@membreEmail = zawadi@mwangaza.cd
+@membreCompte = MW-PRI-7JV10I
+@membrePassword = 345999
+@membreNouveauPass = MonNouveauPass@2026
+
+### =============================================
+### 🔑 0. LOGIN — Obtenir les tokens
+### =============================================
+
+# @name loginAdmin
+POST {{baseUrl}}/auth/admin/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+###
+@adminToken = {{loginAdmin.response.body.token}}
+
+# @name loginMembre
+POST {{baseUrl}}/auth/membre/login
+Content-Type: application/json
+
+{
+  "email": "{{membreEmail}}",
+  "password": "{{membrePassword}}"
+}
+
+###
+@membreToken = {{loginMembre.response.body.token}}
+
+### =============================================
+### 📋 1. LISTE DES MEMBRES (paginée)
+### =============================================
+
+### ✅ Admin — page 1 par défaut
+GET {{baseUrl}}/membres
+Authorization: Bearer {{adminToken}}
+
+### ✅ Admin — page 2, 5 par page
+GET {{baseUrl}}/membres?page=2&pageSize=5
+Authorization: Bearer {{adminToken}}
+
+### ✅ Membre — peut aussi lister
+GET {{baseUrl}}/membres
+Authorization: Bearer {{membreToken}}
+
+### ❌ Sans token — 401 attendu
+GET {{baseUrl}}/membres
+
+### =============================================
+### 📊 2. STATISTIQUES GLOBALES
+### =============================================
+
+### ✅ Admin — stats des membres
+GET {{baseUrl}}/membres/stats
+Authorization: Bearer {{adminToken}}
+
+### ✅ Membre — peut aussi voir les stats
+GET {{baseUrl}}/membres/stats
+Authorization: Bearer {{membreToken}}
+
+### =============================================
+### 🔢 3. NUMÉROS DE COMPTE (admin seulement)
+### =============================================
+
+### ✅ Admin — liste de tous les numéros
+GET {{baseUrl}}/membres/numeros
+Authorization: Bearer {{adminToken}}
+# Attendu : 200 — liste [{id, numero_compte, nom_complet}]
+
+### ❌ Membre — 403 attendu
+GET {{baseUrl}}/membres/numeros
+Authorization: Bearer {{membreToken}}
+# Attendu : 403 — accès refusé
+
+### =============================================
+### 🔍 4. TROUVER UN MEMBRE
+### =============================================
+
+### ✅ Par ID
+GET {{baseUrl}}/membres/1
+Authorization: Bearer {{adminToken}}
+
+### ✅ Par numéro de compte
+GET {{baseUrl}}/membres/by-numero/{{membreCompte}}
+Authorization: Bearer {{adminToken}}
+
+### ✅ Par ZKTeco userId
+GET {{baseUrl}}/membres/by-zkid/ZK-001
+Authorization: Bearer {{adminToken}}
+
+### ❌ ID inexistant — 404 attendu
+GET {{baseUrl}}/membres/99999
+Authorization: Bearer {{adminToken}}
+
+### =============================================
+### 🔄 4.5 PREMIER ACCÈS — Changer le mot de passe
+### =============================================
+# @name changePassword
+POST {{baseUrl}}/auth/membre/first-access
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "newPassword": "{{membreNouveauPass}}"
+}
+# ✅ Attendu : 201 — "Mot de passe configuré avec succès"
+
+### 🔑 RE-LOGIN avec le nouveau mot de passe
+# @name loginMembreFinal
+POST {{baseUrl}}/auth/membre/login
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "password": "{{membreNouveauPass}}"
+}
+###
+@membreTokenFinal = {{loginMembreFinal.response.body.token}}
+
+### =============================================
+### 🏠 5. DASHBOARD MEMBRE (protection IDOR)
+### =============================================
+
+### ✅ Admin — peut voir n'importe quel dashboard
+GET {{baseUrl}}/membres/dashboard/{{membreCompte}}
+Authorization: Bearer {{adminToken}}
+
+### ✅ Membre — peut voir SON propre dashboard (Maintenant débloqué !)
+GET {{baseUrl}}/membres/dashboard/{{membreCompte}}
+Authorization: Bearer {{membreTokenFinal}}
+# Attendu : 200 si le token correspond au compte
+
+### ❌ Membre — essaie de voir le dashboard d'un autre
+GET {{baseUrl}}/membres/dashboard/MW-PRI-AUTRECOMPTE
+Authorization: Bearer {{membreToken}}
+# Attendu : 403 — protection IDOR
+
+### ❌ Membre premier accès — dashboard bloqué
+GET {{baseUrl}}/membres/dashboard/MW-PRI-FIRSTACCES
+Authorization: Bearer {{adminToken}}
+# Attendu : 400 — "Veuillez changer votre mot de passe"
+
+### =============================================
+### ✏️ 6. CRÉER UN MEMBRE (admin seulement)
+### =============================================
+
+### ✅ Admin — création complète avec délégué
+POST {{baseUrl}}/membres
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "nomComplet": "Zawadi Amani",
+  "telephone": "+243812345999",
+  "email": "zawadi@mwangaza.cd",
+  "typeCompte": "PRINCIPAL",
+  "statut": "actif",
+  "dateAdhesion": "2026-03-12",
+  "sexe": "F",
+  "adresse": "Goma, Quartier Himbi",
+  "delegue": {
+    "nom": "Amani Jean",
+    "telephone": "+243812345998",
+    "relation": "Époux"
+  }
+}
+# ✅ Attendu : 201 — membre créé avec numéro compte généré automatiquement
+
+### ❌ Admin — téléphone format invalide
+POST {{baseUrl}}/membres
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "nomComplet": "Test",
+  "telephone": "0700",
+  "typeCompte": "PRINCIPAL",
+  "statut": "actif",
+  "dateAdhesion": "2026-03-12"
+}
+# ✅ Attendu : 400 — validation téléphone RDC
+
+### ❌ Membre simple — tente de créer un autre membre
+POST {{baseUrl}}/membres
+Authorization: Bearer {{membreToken}}
+Content-Type: application/json
+
+{
+  "nomComplet": "Hack",
+  "telephone": "+243812345001",
+  "typeCompte": "PRINCIPAL",
+  "statut": "actif",
+  "dateAdhesion": "2026-03-12"
+}
+# ✅ Attendu : 403 — accès refusé
+
+### =============================================
+### ✏️ 7. MODIFIER UN MEMBRE (admin seulement)
+### =============================================
+
+### ✅ Admin — modifier le nom
+PUT {{baseUrl}}/membres/1
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "nomComplet": "Zawadi Amani Modifiée"
+}
+# Attendu : 200
+
+### ❌ Membre — tente de modifier
+PUT {{baseUrl}}/membres/1
+Authorization: Bearer {{membreToken}}
+Content-Type: application/json
+
+{
+  "nomComplet": "Hack"
+}
+# Attendu : 403
+
+### =============================================
+### 🗑️ 8. SUPPRIMER UN MEMBRE (admin seulement)
+### =============================================
+
+### ✅ Admin — supprime un membre sans transactions
+DELETE {{baseUrl}}/membres/1
+Authorization: Bearer {{adminToken}}
+# Attendu : 200 — success ou 400 si transactions existantes
+
+### ❌ Membre — tente de supprimer
+DELETE {{baseUrl}}/membres/1
+Authorization: Bearer {{membreToken}}
+# Attendu : 403
+
+### =============================================
+### 🔢 9. GÉNÉRER UN NUMÉRO DE COMPTE
+### =============================================
+
+### ✅ Générer un numéro pour la section principale
+GET {{baseUrl}}/membres/generate-numero?section=PRINCIPAL
+Authorization: Bearer {{adminToken}}
+
+### ✅ Générer pour l'année 2026
+GET {{baseUrl}}/membres/generate-numero?year=2026&section=PRINCIPAL
+Authorization: Bearer {{adminToken}}
+
+### =============================================
+### 🔍 10. VÉRIFIER UN USERID (empreinte ZKTeco)
+### =============================================
+
+### ✅ Admin — vérifier si une empreinte est utilisée
+GET {{baseUrl}}/membres/check-userid/ZK-001
+Authorization: Bearer {{adminToken}}
+# Attendu : { exists: false } ou { exists: true, where: 'membre' }
+
+### =============================================
+### 👑 11. DÉLÉGUÉS (admin seulement)
+### =============================================
+
+### ✅ Admin — recherche par userId ZKTeco
+GET {{baseUrl}}/delegues/by-userid/ZK-001
+Authorization: Bearer {{adminToken}}
+# Attendu : 200 — données du délégué et de son membre
+
+### ❌ Sans token — 401 attendu
+GET {{baseUrl}}/delegues/by-userid/ZK-001
+# Attendu : 401
+
+### ❌ Membre — 403 attendu
+GET {{baseUrl}}/delegues/by-userid/ZK-001
+Authorization: Bearer {{membreToken}}
+# Attendu : 403 — accès réservé admins

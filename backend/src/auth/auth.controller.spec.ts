@@ -11,7 +11,7 @@ describe('AuthController', () => {
   const mockAuthService = {
     loginAdmin: jest.fn().mockResolvedValue({ success: true, token: 'admin-token' }),
     loginMembre: jest.fn().mockResolvedValue({ success: true, token: 'membre-token' }),
-    changePassword: jest.fn().mockResolvedValue({ success: true, message: 'Updated' }),
+    changePasswordFirstAccess: jest.fn().mockResolvedValue({ success: true, message: 'Mot de passe configuré avec succès' }),
   };
 
   beforeEach(async () => {
@@ -24,6 +24,8 @@ describe('AuthController', () => {
 
     controller = module.get<AuthController>(AuthController);
     service = module.get<AuthService>(AuthService);
+
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -48,11 +50,11 @@ describe('AuthController', () => {
     });
   });
 
-  describe('changePassword', () => {
-    it('should call authService.changePassword', async () => {
-      const dto: ChangePasswordDto = { numeroCompte: 'MB-001', newPassword: 'newPassword' };
-      const result = await controller.changePassword(dto);
-      expect(service.changePassword).toHaveBeenCalledWith(dto.numeroCompte, dto.newPassword);
+  describe('changePasswordFirstAccess', () => {
+    it('should call authService.changePasswordFirstAccess', async () => {
+      const dto: ChangePasswordDto = { numeroCompte: 'MB-001', newPassword: 'NewPass1@strong' };
+      const result = await controller.changePasswordFirstAccess(dto);
+      expect(service.changePasswordFirstAccess).toHaveBeenCalledWith(dto.numeroCompte, dto.newPassword);
       expect(result.success).toBe(true);
     });
   });

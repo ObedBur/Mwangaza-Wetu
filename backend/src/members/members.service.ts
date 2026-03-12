@@ -623,18 +623,23 @@ export class MembersService {
 
     // Mettre à plat et trier les transactions récentes interactives
     const allTransactions = [
-      ...membre.epargnes
-        .filter(e => e.typeOperation === 'depot')
-        .map(e => ({ type: 'depot', devise: e.devise, montant: Number(e.montant), date: e.dateOperation, description: e.description })),
-      ...membre.retraits
+      ...(membre.epargnes || [])
+        .map(e => ({ 
+          type: e.typeOperation === 'depot' ? 'depot' : 'retrait', 
+          devise: e.devise, 
+          montant: Number(e.montant), 
+          date: e.dateOperation, 
+          description: e.description 
+        })),
+      ...(membre.retraits || [])
         .map(r => ({ type: 'retrait', devise: r.devise, montant: Number(r.montant), date: r.dateOperation, description: r.description, frais: Number(r.frais) })),
-      ...membre.credits.flatMap(c =>
-        c.remboursements.map(r => ({ type: 'remboursement', devise: r.devise, montant: Number(r.montant), date: r.dateRemboursement, description: r.description }))
+      ...(membre.credits || []).flatMap(c =>
+        (c.remboursements || []).map(r => ({ type: 'remboursement', devise: r.devise, montant: Number(r.montant), date: r.dateRemboursement, description: r.description }))
       )
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Format Credits Details pour l'UI
-    const activeCreditsDetails = membre.credits
+    const activeCreditsDetails = (membre.credits || [])
       .filter(c => c.statut === PrismaStatutMembre.actif || c.statut === 'en_retard')
       .map(c => {
         const montantTotal = Number(c.montant) * (1 + Number(c.tauxInteret) / 100);

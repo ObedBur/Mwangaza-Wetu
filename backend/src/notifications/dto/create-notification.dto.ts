@@ -1,7 +1,25 @@
+import { IsInt, IsOptional, IsString, IsIn, IsNotEmpty } from 'class-validator';
+
 export class CreateNotificationDto {
-  membreId?: number; // Optionnel : si membreId est présent, la notification est pour un membre
-  adminId?: number;  // Optionnel : si adminId est présent, la notification est pour un administrateur
+  @IsInt()
+  @IsOptional()
+  membreId?: number;
+
+  @IsInt()
+  @IsOptional()
+  adminId?: number;
+
+  @IsString()
+  @IsNotEmpty()
   titre!: string;
+
+  @IsString()
+  @IsNotEmpty()
   message!: string;
+
+  @IsString()
+  @IsOptional()
+  @IsIn(['info', 'success', 'warning', 'credit', 'epargne'])
   type?: 'info' | 'success' | 'warning' | 'credit' | 'epargne';
 }
+

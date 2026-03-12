@@ -156,16 +156,15 @@ export class WithdrawalsService {
     return { success: true, soldeActuel };
   }
 
-  async create(dto: CreateWithdrawalDto) {
+  async create(dto: CreateWithdrawalDto, adminId?: number) {
     const { compte, montant, devise, dateOperation, description } = dto;
 
     try {
-      console.log('🔍 Création retrait - Données reçues:', {
+      console.log(` [AUDIT] Création retrait par Admin ID: ${adminId || 'Inconnu'}`, {
         compte,
         montant,
         devise,
         dateOperation,
-        description,
       });
 
       const dateO = new Date(dateOperation);
@@ -215,6 +214,8 @@ export class WithdrawalsService {
             soldeAvant: soldeActuel,
             soldeApres: soldeApres,
             frais,
+            // Optionnel: ajouter adminId à la table Retrait si le schéma le permet
+            // Pour l'instant on garde la traçabilité via les logs et notifications
           },
         });
 
@@ -280,8 +281,23 @@ export class WithdrawalsService {
       await this.notificationsService.notifyAllAdmins(
         'Nouveau Retrait',
         `Un retrait de ${montant} ${devise} a été effectué sur le compte ${compte}.`,
-        'warning'
+        'warning',
       );
+
+      // Notifier le membre
+      const memberObj = await this.prisma.membre.findUnique({
+        where: { numeroCompte: compte },
+        select: { id: true },
+      });
+
+      if (memberObj) {
+        await this.notificationsService.create({
+          membreId: memberObj.id,
+          titre: 'Débit Compte Épargne',
+          message: `Votre compte ${compte} a été débité de ${montant} ${devise} (Frais: ${frais} ${devise}).`,
+          type: 'warning',
+        });
+      }
 
       return retrait;
     } catch (error: any) {

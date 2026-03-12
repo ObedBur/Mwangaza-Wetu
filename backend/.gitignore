@@ -27,7 +27,11 @@ lerna-debug.log*
 *.launch
 .settings/
 *.sublime-workspace
-
+/backend/uploads
+/backend/*.txt
+/backend/package.json.*
+/backend/pnpm-lock.yaml.*
+result-member.md
 # IDE - VSCode
 .vscode/*
 !.vscode/settings.json
@@ -35,6 +39,13 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# Données de l'application (Photos, documents)
+/uploads
+/temp
+
+# Si tu as une DB SQLite locale pour les tests
+*.db
+*.db-journal
 # dotenv environment variable files
 .env
 .env.development.local

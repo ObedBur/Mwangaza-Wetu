@@ -1,0 +1,125 @@
+### =============================================
+### 💸 TESTS RETRAITS (WITHDRAWALS) — Mwangaza Wetu
+### =============================================
+
+@baseUrl = http://localhost:3000/api
+@adminEmail = admin@mwangaza.cd
+@adminPassword = Admin@123
+@membreCompte = MW-PRI-7JV10I
+@membrePassword = MonNouveauPass@2026
+@retraitDate = 2026-03-12
+
+### =============================================
+### 🔑 0. LOGIN
+### =============================================
+
+# @name loginAdmin
+POST {{baseUrl}}/auth/admin/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+###
+@adminToken = {{loginAdmin.response.body.token}}
+
+# @name loginMembre
+POST {{baseUrl}}/auth/membre/login
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "password": "{{membrePassword}}"
+}
+
+###
+@membreToken = {{loginMembre.response.body.token}}
+
+
+### =============================================
+### 📋 1. CONSULTATION
+### =============================================
+
+### ✅ Admin — Voir tous les retraits
+GET {{baseUrl}}/withdrawals?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+### ❌ Membre — Tente de voir tous les retraits — 403 attendu
+GET {{baseUrl}}/withdrawals
+Authorization: Bearer {{membreToken}}
+
+### ✅ Membre — Voir ses propres retraits
+GET {{baseUrl}}/withdrawals/compte/{{membreCompte}}
+Authorization: Bearer {{membreToken}}
+
+### ❌ Membre — Tente de voir les retraits d'un autre (IDOR) — 403 attendu
+GET {{baseUrl}}/withdrawals/compte/MW-PRI-ANOTHER
+Authorization: Bearer {{membreToken}}
+
+
+### =============================================
+### 💰 2. VALIDATIONS ET CRÉATION
+### =============================================
+
+### ✅ Admin — Vérifier les limites avant retrait
+POST {{baseUrl}}/withdrawals/verify-limites
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "compte": "{{membreCompte}}",
+  "montant": 20,
+  "devise": "USD"
+}
+
+### ✅ Admin — Créer un retrait valide (USD)
+# Note: Cela déclenchera une notification au membre et aux admins
+POST {{baseUrl}}/withdrawals
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "compte": "{{membreCompte}}",
+  "montant": 50,
+  "devise": "USD",
+  "dateOperation": "{{retraitDate}}",
+  "description": "Retrait test via REST client"
+}
+
+### ❌ Membre — Tente d'effectuer un retrait — 403 attendu
+POST {{baseUrl}}/withdrawals
+Authorization: Bearer {{membreToken}}
+Content-Type: application/json
+
+{
+  "compte": "{{membreCompte}}",
+  "montant": 10,
+  "devise": "USD",
+  "dateOperation": "{{retraitDate}}"
+}
+
+### ❌ Admin — Retrait avec montant invalide — 400 attendu
+POST {{baseUrl}}/withdrawals
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "compte": "{{membreCompte}}",
+  "montant": -5,
+  "devise": "USD",
+  "dateOperation": "{{retraitDate}}"
+}
+
+### ❌ Admin — Retrait avec devise invalide — 400 attendu
+POST {{baseUrl}}/withdrawals
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "compte": "{{membreCompte}}",
+  "montant": 10,
+  "devise": "EUR",
+  "dateOperation": "{{retraitDate}}"
+}

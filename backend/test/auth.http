@@ -1,11 +1,19 @@
+### =============================================
+### 🔐 TESTS AUTH — Mwangaza Wetu (Production-Ready)
+### =============================================
+### Utiliser avec l'extension REST Client (VS Code)
+### Lancer le backend d'abord : pnpm start:dev
+
 ### VARIABLES
 @baseUrl = http://localhost:3000/api
 @adminEmail = admin@mwangaza.cd
 @adminPassword = Admin@123
-@membreEmail = janisse@gmai.com
-@membrePassword = NewPassword123
+@membreCompte = MW-PRI-SLRKT8
+@membreTelephone = +24381144556677
 
-### 1. TEST DE LOGIN ADMIN (SUCCÈS)
+### =============================================
+### 🔑 1. LOGIN ADMIN — par email (SUCCÈS attendu)
+### =============================================
 # @name loginAdmin
 POST {{baseUrl}}/auth/admin/login
 Content-Type: application/json
@@ -14,24 +22,27 @@ Content-Type: application/json
     "email": "{{adminEmail}}",
     "password": "{{adminPassword}}"
 }
+# ✅ Attendu : 201 — token + role: "admin" ou "superadmin"
 
-### 2. RÉCUPÉRATION DU TOKEN ADMIN
+### Récupération automatique du token admin
 @adminToken = {{loginAdmin.response.body.token}}
+@adminRole = {{loginAdmin.response.body.user.role}}
 
-### 3. TEST DE LOGIN MEMBRE (SUCCÈS)
-# @name loginMembre
-POST {{baseUrl}}/auth/membre/login
+### =============================================
+### 🔑 2. LOGIN ADMIN — par numéro de compte
+### =============================================
+POST {{baseUrl}}/auth/admin/login
 Content-Type: application/json
 
 {
-    "email": "{{membreEmail}}",
-    "password": "{{membrePassword}}"
+    "numeroCompte": "AD-001",
+    "password": "{{adminPassword}}"
 }
+# ✅ Attendu : 201 — token + role réel depuis la BDD
 
-### 4. RÉCUPÉRATION DU TOKEN MEMBRE
-@membreToken = {{loginMembre.response.body.token}}
-
-### 5. TEST D'ERREUR (MAUVAIS MOT DE PASSE ADMIN)
+### =============================================
+### ❌ 3. LOGIN ADMIN — mauvais mot de passe
+### =============================================
 POST {{baseUrl}}/auth/admin/login
 Content-Type: application/json
 
@@ -39,13 +50,157 @@ Content-Type: application/json
     "email": "{{adminEmail}}",
     "password": "WrongPassword"
 }
-# Attendu : 401 Unauthorized
+# ✅ Attendu : 401 — "Identifiants invalides" (message générique)
 
-### 6. TEST D'ACCÈS PROTÉGÉ SANS TOKEN (ATTENTION : ACTUELLEMENT TOUT EST PUBLIC)
+### =============================================
+### ❌ 4. LOGIN ADMIN — email inexistant
+### =============================================
+POST {{baseUrl}}/auth/admin/login
+Content-Type: application/json
+
+{
+    "email": "inexistant@mwangaza.cd",
+    "password": "Admin@123"
+}
+# ✅ Attendu : 401 — "Identifiants invalides" (même message ! anti-énumération)
+
+### =============================================
+### ❌ 5. LOGIN ADMIN — sans identifiant
+### =============================================
+POST {{baseUrl}}/auth/admin/login
+Content-Type: application/json
+
+{
+    "password": "Admin@123"
+}
+# ✅ Attendu : 400 — "Email ou numéro de compte requis"
+
+### =============================================
+### 🔑 6. LOGIN MEMBRE — par numéro de compte
+### =============================================
+# @name loginMembre
+POST {{baseUrl}}/auth/membre/login
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "password": "556677"
+}
+# ✅ Attendu : 201 — token + firstAcces: true (premier accès)
+
+### Récupération du token membre
+@membreToken = {{loginMembre.response.body.token}}
+@membreFirstAcces = {{loginMembre.response.body.user.firstAcces}}
+
+### =============================================
+### 🔑 7. LOGIN MEMBRE — par téléphone
+### =============================================
+POST {{baseUrl}}/auth/membre/login
+Content-Type: application/json
+
+{
+    "telephone": "{{membreTelephone}}",
+    "password": "556677"
+}
+# ✅ Attendu : 201 — même résultat
+
+### =============================================
+### ❌ 8. LOGIN MEMBRE — mauvais mot de passe
+### =============================================
+POST {{baseUrl}}/auth/membre/login
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "password": "WrongPassword"
+}
+# ✅ Attendu : 401 — "Identifiants invalides"
+
+### =============================================
+### 🔄 9. PREMIER ACCÈS — Changement de mot de passe
+### =============================================
+### Endpoint pour les nouveaux membres : firstAcces doit être true
+POST {{baseUrl}}/auth/membre/first-access
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "newPassword": "MonNouveau@Pass1"
+}
+# ✅ Attendu : 201 — "Mot de passe configuré avec succès"
+# ⚠️ Note : Ne fonctionne que si firstAcces === true pour ce membre
+
+### =============================================
+### ❌ 10. PREMIER ACCÈS — Déjà configuré (2ème tentative)
+### =============================================
+### Après le test 9, firstAcces est devenu false
+POST {{baseUrl}}/auth/membre/first-access
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "newPassword": "AutreMotDePasse@1"
+}
+# ✅ Attendu : 400 — "Ce compte a déjà été configuré..."
+
+### =============================================
+### ❌ 11. PREMIER ACCÈS — Mot de passe trop faible
+### =============================================
+POST {{baseUrl}}/auth/membre/first-access
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "newPassword": "weak"
+}
+# ✅ Attendu : 400 — Erreur de validation (min 8 chars, majuscule, chiffre, spécial)
+
+### =============================================
+### 🔑 12. LOGIN MEMBRE — avec le nouveau mot de passe
+### =============================================
+POST {{baseUrl}}/auth/membre/login
+Content-Type: application/json
+
+{
+    "numeroCompte": "{{membreCompte}}",
+    "password": "MonNouveau@Pass1"
+}
+# ✅ Attendu : 201 — token + firstAcces: false (configuré !)
+
+### =============================================
+### 🛡️ 13. ACCÈS PROTÉGÉ — sans token
+### =============================================
 GET {{baseUrl}}/membres
-# Devrait être : 401 Unauthorized (Dès que le Guard sera activé)
+# ✅ Attendu : 401 — "Unauthorized" (Guard JWT global)
 
-### 7. TEST D'ACCÈS PROTÉGÉ AVEC TOKEN
+### =============================================
+### ✅ 14. ACCÈS PROTÉGÉ — avec token admin
+### =============================================
 GET {{baseUrl}}/membres
 Authorization: Bearer {{adminToken}}
-# Attendu : 200 OK
+# ✅ Attendu : 200 — Liste des membres
+
+### =============================================
+### 🛡️ 15. ACCÈS PROTÉGÉ — avec token membre
+### =============================================
+GET {{baseUrl}}/membres
+Authorization: Bearer {{membreToken}}
+# ✅ Attendu : 200 ou 403 — selon les rôles configurés sur cette route
+
+### =============================================
+### 🛡️ 16. SÉCURITÉ — Token invalide / expiré
+### =============================================
+GET {{baseUrl}}/membres
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.INVALIDE.TOKEN
+# ✅ Attendu : 401 — Token invalide
+
+### =============================================
+### 🛡️ 17. VÉRIFIER HELMET — en-têtes de sécurité
+### =============================================
+# @name checkHeaders
+GET {{baseUrl}}/
+# ✅ Vérifier dans les headers de réponse :
+# - x-content-type-options: nosniff
+# - x-frame-options: SAMEORIGIN
+# - x-xss-protection: 0 (désactivé, remplacé par CSP)
+# - strict-transport-security (si HTTPS)

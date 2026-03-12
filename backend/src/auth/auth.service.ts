@@ -37,26 +37,26 @@ export class AuthService {
     }
 
     if (!admin || !admin.actif) {
-      throw new UnauthorizedException('Admin non trouvé ou inactif');
+      throw new UnauthorizedException('Identifiants invalides');
     }
 
     const isValid = await bcrypt.compare(password, admin.motDePasse);
     if (!isValid) {
-      throw new UnauthorizedException('Mot de passe incorrect');
+      throw new UnauthorizedException('Identifiants invalides');
     }
 
     const payload = {
       id: admin.id,
       email: admin.email,
       numero_compte: admin.numeroCompte,
-      role: 'admin',
+      role: admin.role,
     };
 
-    this.logger.log(`[SUCCESS] Admin connecté : ${admin.nom} ${admin.prenom} (${admin.numeroCompte})`);
+    this.logger.log(`[SUCCESS] Admin connecté : ${admin.numeroCompte}`);
     return {
       success: true,
       message: 'Connexion réussie',
-      token: this.jwtService.sign(payload),
+      token: this.jwtService.sign(payload, { expiresIn: '8h' }),
       user: {
         ...payload,
         nom_complet: `${admin.prenom} ${admin.nom}`,
@@ -84,16 +84,16 @@ export class AuthService {
     }
 
     if (!membre) {
-      throw new UnauthorizedException('Membre non trouvé');
+      throw new UnauthorizedException('Identifiants invalides');
     }
 
     if (!membre.motDePasse) {
-      throw new UnauthorizedException('Compte membre non configuré');
+      throw new UnauthorizedException('Identifiants invalides');
     }
 
     const isValid = await bcrypt.compare(password, membre.motDePasse);
     if (!isValid) {
-      throw new UnauthorizedException('Mot de passe incorrect');
+      throw new UnauthorizedException('Identifiants invalides');
     }
 
     const payload = {
@@ -103,25 +103,26 @@ export class AuthService {
       role: 'membre',
     };
 
-    this.logger.log(`[SUCCESS] Membre connecté : ${membre.nomComplet} (${membre.numeroCompte})`);
+    this.logger.log(`[SUCCESS] Membre connecté : ${membre.numeroCompte}`);
     return {
       success: true,
       message: 'Connexion membre réussie',
-      token: this.jwtService.sign(payload),
+      token: this.jwtService.sign(payload, { expiresIn: '24h' }),
       user: {
         ...payload,
         nom_complet: membre.nomComplet,
         section: membre.typeCompte,
-        firstAcces: (membre as any).firstAcces,
+        firstAcces: membre.firstAcces,
       },
     };
   }
 
   /**
-   * Permet à un membre de changer son mot de passe initial.
+   * Permet à un membre de configurer son mot de passe lors du premier accès.
+   * Accessible uniquement quand firstAcces est true.
    * Met à jour le flag firstAcces à false après le changement.
    */
-  async changePassword(numeroCompte: string, newPassword: string) {
+  async changePasswordFirstAccess(numeroCompte: string, newPassword: string) {
     const membre = await this.prisma.membre.findUnique({
       where: { numeroCompte },
     });
@@ -130,7 +131,13 @@ export class AuthService {
       throw new BadRequestException('Membre non trouvé');
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    if (!membre.firstAcces) {
+      throw new BadRequestException(
+        'Ce compte a déjà été configuré. Contactez un administrateur pour réinitialiser votre mot de passe.',
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     await this.prisma.membre.update({
       where: { id: membre.id },
@@ -140,10 +147,10 @@ export class AuthService {
       },
     });
 
-    this.logger.log(`[PASSWORD_CHANGE] Mot de passe mis à jour pour : ${membre.numeroCompte}`);
+    this.logger.log(`[FIRST_ACCESS] Mot de passe configuré pour : ${membre.numeroCompte}`);
     return {
       success: true,
-      message: 'Mot de passe mis à jour avec succès',
+      message: 'Mot de passe configuré avec succès',
     };
   }
 }

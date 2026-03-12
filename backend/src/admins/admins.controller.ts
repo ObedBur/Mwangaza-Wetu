@@ -13,7 +13,7 @@ import { CreateAdminDto, ConfirmAdminDto } from './dto/create-admin.dto';
 
 @Controller('api/admin')
 export class AdminsController {
-  constructor(private readonly adminsService: AdminsService) {}
+  constructor(private readonly adminsService: AdminsService) { }
 
   @Get('last-number')
   async getLastAdminNumber() {

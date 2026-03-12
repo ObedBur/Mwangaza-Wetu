@@ -29,12 +29,15 @@ export class AuthController {
   }
 
   /**
-   * Endpoint permettant aux membres de modifier leur mot de passe.
+   * Endpoint pour le premier accès d'un membre.
+   * Permet de configurer son mot de passe personnel.
+   * Accessible sans token (le membre vient de recevoir son compte).
+   * Protégé côté service : vérifie que firstAcces === true.
    */
   @Public()
-  @Post('membre/change-password')
-  async changePassword(@Body() changePasswordDto: ChangePasswordDto) {
-    return this.authService.changePassword(
+  @Post('membre/first-access')
+  async changePasswordFirstAccess(@Body() changePasswordDto: ChangePasswordDto) {
+    return this.authService.changePasswordFirstAccess(
       changePasswordDto.numeroCompte,
       changePasswordDto.newPassword,
     );
