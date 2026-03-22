@@ -32,6 +32,9 @@ export interface MemberRecord {
     userId?: string | null;
     photoProfil?: string | null;
   }[];
+  isActivated: boolean;
+  activationToken?: string | null;
+  activationExpires?: string | null;
   createdAt: string;
   updatedAt: string;
 }

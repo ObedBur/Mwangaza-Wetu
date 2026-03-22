@@ -12,6 +12,7 @@ import {
 import { MembersService } from './members.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { getSectionLetter, normalizeSectionName } from '../common/constants/sections';
+import { Public } from '../auth/jwt-auth.guard';
 
 @Controller('api/membres')
 export class MembersController {
@@ -101,6 +102,12 @@ export class MembersController {
   @Post()
   async create(@Body() createMemberDto: CreateMemberDto) {
     return this.membersService.create(createMemberDto);
+  }
+
+  @Public()
+  @Post('activate')
+  async activate(@Body() body: { token: string; motDePasse: string }) {
+    return this.membersService.activate(body.token, body.motDePasse);
   }
 
   @Put(':id')

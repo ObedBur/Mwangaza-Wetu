@@ -20,8 +20,8 @@ model Membre {
   numeroCompte   String          @unique @map("numero_compte")
   nomComplet     String          @map("nom_complet")
   dateAdhesion   DateTime        @map("date_adhesion")
-  telephone      String
-  email          String?
+  telephone      String          @unique
+  email          String?         @unique
   adresse        String?
   sexe           Sexe?
   typeCompte     String          @map("type_compte")
@@ -33,28 +33,35 @@ model Membre {
   idNationale    String?         @map("id_nationale")
   createdAt      DateTime        @default(now()) @map("created_at")
   updatedAt      DateTime        @updatedAt @map("updated_at")
+  first_acces       Boolean         @default(true)
+  activationToken   String?         @map("activation_token")
+  activationExpires DateTime?       @map("activation_expires")
+  isActivated       Boolean         @default(false) @map("is_activated")
   attendances    Attendance[]
   comptesEpargne CompteEpargne[]
   credits        Credit[]
   delegues       Delegue[]
   epargnes       Epargne[]
+  notifications  notifications[]
   retraits       Retrait[]
 
   @@map("membres")
 }
 
 model Administrateur {
-  id           Int      @id @default(autoincrement())
-  nom          String
-  prenom       String
-  email        String   @unique
-  telephone    String
-  motDePasse   String   @map("mot_de_passe")
-  role         Role     @default(admin)
-  actif        Boolean  @default(true)
-  numeroCompte String?  @unique @map("numero_compte")
-  userId       String?  @unique @map("userId")
-  dateCreation DateTime @default(now()) @map("date_creation")
+  id            Int             @id @default(autoincrement())
+  nom           String
+  prenom        String
+  email         String          @unique
+  telephone     String
+  motDePasse    String          @map("mot_de_passe")
+  role          Role            @default(admin)
+  actif         Boolean         @default(true)
+  numeroCompte  String?         @unique @map("numero_compte")
+  userId        String?         @unique @map("userId")
+  dateCreation  DateTime        @default(now()) @map("date_creation")
+  photoProfil   String?         @map("photo_profil")
+  notifications notifications[]
 
   @@map("administrateurs")
 }
@@ -101,17 +108,17 @@ model CompteEpargne {
 }
 
 model Epargne {
-  id                Int                  @id @default(autoincrement())
-  compte            String
-  typeOperation     TypeOperationEpargne @map("type_operation")
-  devise            Devise
-  montant           Decimal              @db.Decimal(18, 2)
-  dateOperation     DateTime             @map("date_operation")
-  description       String?
-  remboursementId   Int?                 @map("remboursement_id")
-  createdAt         DateTime             @default(now()) @map("created_at")
-  membre            Membre?              @relation(fields: [compte], references: [numeroCompte])
-  remboursement     Remboursement?       @relation("remboursement_epargnes", fields: [remboursementId], references: [id], onDelete: SetNull)
+  id              Int                  @id @default(autoincrement())
+  compte          String
+  typeOperation   TypeOperationEpargne @map("type_operation")
+  devise          Devise
+  montant         Decimal              @db.Decimal(18, 2)
+  dateOperation   DateTime             @map("date_operation")
+  description     String?
+  createdAt       DateTime             @default(now()) @map("created_at")
+  remboursementId Int?                 @map("remboursement_id")
+  membre          Membre               @relation(fields: [compte], references: [numeroCompte])
+  remboursement   Remboursement?       @relation("remboursement_epargnes", fields: [remboursementId], references: [id])
 
   @@index([remboursementId])
   @@index([dateOperation])
@@ -128,51 +135,51 @@ model Retrait {
   soldeAvant    Decimal       @map("solde_avant") @db.Decimal(18, 2)
   soldeApres    Decimal       @map("solde_apres") @db.Decimal(18, 2)
   frais         Decimal       @default(0) @db.Decimal(18, 2)
+  createdAt     DateTime      @default(now()) @map("created_at")
   reference     String        @unique @default(cuid())
   statut        StatutRetrait @default(COMPLETED)
-  createdAt     DateTime      @default(now()) @map("created_at")
   membre        Membre        @relation(fields: [compte], references: [numeroCompte])
 
   @@map("retraits")
 }
 
 model Credit {
-  id               Int             @id @default(autoincrement())
-  numeroCompte     String          @map("numero_compte")
-  montant          Decimal         @db.Decimal(18, 2)
-  montantRembourse Decimal         @default(0) @map("montant_rembourse") @db.Decimal(18, 2)
-  devise           String
-  tauxInteret      Decimal         @map("taux_interet") @db.Decimal(18, 2)
-  duree            Int
-  dateDebut        DateTime        @map("date_debut")
-  dateEcheance     DateTime?       @map("date_echeance")
-  statut           StatutCredit    @default(actif)
-  description      String?
+  id                Int             @id @default(autoincrement())
+  numeroCompte      String          @map("numero_compte")
+  montant           Decimal         @db.Decimal(18, 2)
+  montantRembourse  Decimal         @default(0) @map("montant_rembourse") @db.Decimal(18, 2)
+  devise            String
+  tauxInteret       Decimal         @map("taux_interet") @db.Decimal(18, 2)
+  duree             Int
+  dateDebut         DateTime        @map("date_debut")
+  dateEcheance      DateTime?       @map("date_echeance")
+  statut            StatutCredit    @default(actif)
+  description       String?
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
   derniereOperation DateTime?       @map("derniere_operation")
-  createdAt        DateTime        @default(now()) @map("created_at")
-  updatedAt        DateTime        @updatedAt @map("updated_at")
-  membre           Membre          @relation(fields: [numeroCompte], references: [numeroCompte])
-  remboursements   Remboursement[]
+  membre            Membre          @relation(fields: [numeroCompte], references: [numeroCompte])
+  remboursements    Remboursement[]
 
   @@map("credits")
 }
 
 model Remboursement {
-  id                Int      @id @default(autoincrement())
-  creditId          Int      @map("credit_id")
-  montant           Decimal  @db.Decimal(18, 2)
+  id                Int       @id @default(autoincrement())
+  creditId          Int       @map("credit_id")
+  montant           Decimal   @db.Decimal(18, 2)
   devise            String
-  dateRemboursement DateTime @map("date_remboursement")
-  partPrincipal     Decimal  @default(0) @db.Decimal(18, 2) @map("part_principal")
-  partInteret       Decimal  @default(0) @db.Decimal(18, 2) @map("part_interet")
-  deletedAt         DateTime? @map("deleted_at")
-  deleteReason      String?   @map("delete_reason")
-  idempotencyKey    String?   @unique @map("idempotency_key")
+  dateRemboursement DateTime  @map("date_remboursement")
   description       String?
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  credit            Credit   @relation(fields: [creditId], references: [id], onDelete: Cascade)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  deleteReason      String?   @map("delete_reason")
+  deletedAt         DateTime? @map("deleted_at")
+  idempotencyKey    String?   @unique @map("idempotency_key")
+  partInteret       Decimal   @default(0) @map("part_interet") @db.Decimal(18, 2)
+  partPrincipal     Decimal   @default(0) @map("part_principal") @db.Decimal(18, 2)
+  updatedAt         DateTime  @updatedAt @map("updated_at")
   epargnes          Epargne[] @relation("remboursement_epargnes")
+  credit            Credit    @relation(fields: [creditId], references: [id], onDelete: Cascade)
   revenus           Revenu[]  @relation("remboursement_revenus")
 
   @@index([creditId])
@@ -214,6 +221,50 @@ model AdminLog {
   @@map("admin_logs")
 }
 
+model RevenuType {
+  id          Int      @id @default(autoincrement())
+  nom         String   @unique
+  description String?
+  revenus     Revenu[]
+
+  @@map("revenu_types")
+}
+
+model Revenu {
+  id              Int            @id @default(autoincrement())
+  typeCompte      String         @map("type_compte")
+  typeRevenuId    Int            @map("type_revenu_id")
+  montant         Decimal        @db.Decimal(18, 2)
+  devise          Devise
+  dateOperation   DateTime       @map("date_operation")
+  sourceCompte    String?        @map("source_compte")
+  remboursementId Int?           @map("remboursement_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  remboursement   Remboursement? @relation("remboursement_revenus", fields: [remboursementId], references: [id])
+  typeRevenu      RevenuType     @relation(fields: [typeRevenuId], references: [id])
+
+  @@index([remboursementId])
+  @@index([dateOperation])
+  @@map("revenus")
+}
+
+model notifications {
+  id              Int             @id @default(autoincrement())
+  membre_id       Int?
+  admin_id        Int?
+  titre           String
+  message         String
+  type            String          @default("info")
+  is_read         Boolean         @default(false)
+  created_at      DateTime        @default(now())
+  administrateurs Administrateur? @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  membres         Membre?         @relation(fields: [membre_id], references: [id], onDelete: Cascade)
+
+  @@index([admin_id])
+  @@index([created_at])
+  @@index([membre_id])
+}
+
 enum Role {
   admin
   superadmin
@@ -249,31 +300,4 @@ enum StatutRetrait {
   PENDING
   COMPLETED
   FAILED
-}
-
-model RevenuType {
-  id          Int      @id @default(autoincrement())
-  nom         String   @unique
-  description String?
-  revenus     Revenu[]
-
-  @@map("revenu_types")
-}
-
-model Revenu {
-  id                Int        @id @default(autoincrement())
-  typeCompte        String     @map("type_compte")
-  typeRevenuId      Int        @map("type_revenu_id")
-  montant           Decimal    @db.Decimal(18, 2)
-  devise            Devise
-  dateOperation     DateTime   @map("date_operation")
-  sourceCompte      String?    @map("source_compte")
-  remboursementId   Int?       @map("remboursement_id")
-  createdAt         DateTime   @default(now()) @map("created_at")
-  typeRevenu        RevenuType @relation(fields: [typeRevenuId], references: [id])
-  remboursement     Remboursement? @relation("remboursement_revenus", fields: [remboursementId], references: [id], onDelete: SetNull)
-
-  @@index([remboursementId])
-  @@index([dateOperation])
-  @@map("revenus")
 }

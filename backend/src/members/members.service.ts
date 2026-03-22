@@ -14,6 +14,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import { Prisma, StatutMembre as PrismaStatutMembre, Devise } from '@prisma/client';
 
 @Injectable()
@@ -204,6 +205,10 @@ export class MembersService {
       hashedPassword = await bcrypt.hash(motDePasse, 10);
     }
 
+    const activationToken = crypto.randomBytes(32).toString('hex');
+    const activationExpires = new Date();
+    activationExpires.setHours(activationExpires.getHours() + 24);
+
     // Gérer la photo du membre
     const photoFileName = this.saveBase64Image(
       createMemberDto.photoProfil || '',
@@ -229,6 +234,9 @@ export class MembersService {
             ? new Date(createMemberDto.dateNaissance)
             : null,
           idNationale: createMemberDto.idNationale,
+          activationToken,
+          activationExpires,
+          isActivated: !!motDePasse, // Déjà activé si un mot de passe est fourni à la création
         },
       });
 
@@ -579,8 +587,8 @@ export class MembersService {
   async getMemberDashboard(identifier: string) {
     // Identifier can be an ID (number) or Account Number (string)
     const isId = !isNaN(Number(identifier));
-    
-    const whereClause = isId 
+
+    const whereClause = isId
       ? { id: Number(identifier) }
       : { numeroCompte: identifier };
 
@@ -610,18 +618,18 @@ export class MembersService {
     // Mettre à plat et trier les transactions récentes interactives
     const allTransactions = [
       ...membre.epargnes.map(e => ({ type: 'depot', devise: e.devise, montant: Number(e.montant), date: e.dateOperation, description: e.description })),
-      ...membre.retraits.map(r => ({ type: 'retrait', devise: r.devise, montant: Number(r.montantRetire), date: r.dateOperation, description: r.description })),
+      ...membre.retraits.map(r => ({ type: 'retrait', devise: r.devise, montant: Number(r.montant), date: r.dateOperation, description: r.description })),
       ...membre.credits.flatMap(c => c.remboursements.map(r => ({ type: 'remboursement', devise: r.devise, montant: Number(r.montant), date: r.dateRemboursement, description: r.description })))
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     // Calculs de l'épargne (dépôts - retraits)
-    const epargneUSD = 
+    const epargneUSD =
       membre.epargnes.filter(e => e.devise === Devise.USD).reduce((sum, e) => sum + Number(e.montant), 0) -
-      membre.retraits.filter(r => r.devise === Devise.USD).reduce((sum, r) => sum + Number(r.montantRetire), 0);
+      membre.retraits.filter(r => r.devise === Devise.USD).reduce((sum, r) => sum + Number(r.montant), 0);
 
-    const epargneFC = 
+    const epargneFC =
       membre.epargnes.filter(e => e.devise === Devise.FC).reduce((sum, e) => sum + Number(e.montant), 0) -
-      membre.retraits.filter(r => r.devise === Devise.FC).reduce((sum, r) => sum + Number(r.montantRetire), 0);
+      membre.retraits.filter(r => r.devise === Devise.FC).reduce((sum, r) => sum + Number(r.montant), 0);
 
     // Filter active credits
     const activeCredits = membre.credits.filter(c => c.statut === PrismaStatutMembre.actif || c.statut === 'en_retard');
@@ -675,5 +683,30 @@ export class MembersService {
       activeCreditsDetails: creditsDetails,
       recentTransactions: allTransactions.slice(0, 15) // Only last 15 for dashboard performance
     };
+  }
+
+  async activate(token: string, password: string) {
+    const membre = await this.prisma.membre.findFirst({
+      where: {
+        activationToken: token,
+        activationExpires: { gt: new Date() },
+      },
+    });
+
+    if (!membre) {
+      throw new BadRequestException('Lien d\'activation invalide ou expiré');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    return this.prisma.membre.update({
+      where: { id: membre.id },
+      data: {
+        motDePasse: hashedPassword,
+        isActivated: true,
+        activationToken: null,
+        activationExpires: null,
+      },
+    });
   }
 }

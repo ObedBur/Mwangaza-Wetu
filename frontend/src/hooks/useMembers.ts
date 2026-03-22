@@ -319,3 +319,15 @@ export const useCheckUserId = (userId: string, excludeId?: number, options?: { e
     staleTime: 0,
   });
 };
+
+/**
+ * Hook pour activer le compte d'un membre avec son token
+ */
+export const useActivateMember = () => {
+  return useMutation({
+    mutationFn: async (payload: { token: string; motDePasse: string }) => {
+      const response = await apiClient.post<MemberRecord>(API_ROUTES.MEMBRES_ACTIVATE, payload);
+      return response.data;
+    },
+  });
+};

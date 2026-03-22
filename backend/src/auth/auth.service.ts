@@ -43,7 +43,11 @@ export class AuthService {
       id: admin.id,
       email: admin.email,
       numero_compte: admin.numeroCompte,
-      role: 'admin',
+      role: admin.role,
+      nom: admin.nom,
+      prenom: admin.prenom,
+      nom_complet: `${admin.prenom} ${admin.nom}`,
+      photo_profil: admin.photoProfil,
     };
 
     return {
@@ -94,6 +98,7 @@ export class AuthService {
         ...payload,
         nom_complet: membre.nomComplet,
         section: membre.typeCompte,
+        photo_profil: membre.photoProfil,
       },
     };
   }

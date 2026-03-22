@@ -15,6 +15,7 @@ export const API_ROUTES = {
   MEMBRES_GENERATE_NUMERO: '/membres/generate-numero',
   MEMBRES_BY_ZKID: '/membres/by-zkid',
   MEMBRES_SEARCH: '/membres/search',
+  MEMBRES_ACTIVATE: '/membres/activate',
 
   // ─── Épargnes ─────────────────────────────────────
   EPARGNES: '/epargnes',

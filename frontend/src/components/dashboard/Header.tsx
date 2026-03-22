@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   Search,
   Settings,
@@ -14,7 +15,26 @@ import {
 import Image from "next/image";
 
 export default function Header() {
+  const { user } = useAuth();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Fonction pour obtenir les initiales (Prénom Nom)
+  const getInitials = (name?: string) => {
+    if (!name) return "??";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const displayName = user?.nom_complet || user?.email || "Utilisateur";
+  const userRole = user?.role === "admin" ? "Administrateur" : "Membre";
+  const accessLevel = user?.role === "admin" ? "Niveau Accès 1" : (user?.section || "Utilisateur");
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+  const avatarUrl = user?.photo_profil 
+    ? (user.photo_profil.startsWith('http') ? user.photo_profil : `${backendUrl.replace('/api', '')}/uploads/${user.photo_profil}`)
+    : null;
 
   return (
     <header className="glass-panel sticky top-4 z-50 rounded-2xl mx-4 my-4 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
@@ -32,7 +52,7 @@ export default function Header() {
           </div>
           <div className="hidden sm:block">
             <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Admin
+              {user?.role === 'admin' ? 'Admin' : 'Espace Membre'}
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Mwangaza Wetu
@@ -64,19 +84,25 @@ export default function Header() {
           <div className="flex items-center gap-2 cursor-pointer">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-semibold text-slate-900 dark:text-white leading-none">
-                Administrateur
+                {displayName}
               </p>
               <p className="text-[10px] text-slate-400 uppercase font-bold mt-1">
-                Niveau Accès 1
+                {accessLevel}
               </p>
             </div>
             <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center border-2 border-primary/20 overflow-hidden relative">
-              <Image
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuApoZn5sQAPSRUE6zPInfR4iqS79JGKzojMX50f0NycBi9WY2xXNSGXynNkJn5taP2yxqNWsp-hivTJl2NdA3Ua5ezBMrW5MEdb_uPvQ4DAfj3vBBaGrEpsiX1wQrb1XrDHQalfVvHO7UQ8QSz524C7482SH570j5PV973LbZVW5MvNRwIue8IiYeM-eddQk_rNsxLJ1bLEVz6HDNkSz6wxwQwBegpSmCFALhBTmy8bOBfHBpOpBms1EGoNVSn5zNbHaOtqrcHqfaA"
-                alt="Admin Profile"
-                fill
-                className="object-cover"
-              />
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt={displayName}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-300">
+                  {getInitials(displayName)}
+                </span>
+              )}
             </div>
           </div>
 

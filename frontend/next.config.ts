@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@radix-ui/react-select", "lucide-react"],
+
   images: {
     remotePatterns: [
       {
@@ -14,7 +16,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:3000/api/:path*",
+        destination: "http://localhost:4000/api/:path*",
       },
     ];
   },

@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: mwangaza-backend
+    env: node
+    plan: free # Vous pouvez changer en 'starter' plus tard
+    region: frankfurt # Plus proche de Goma/RDC (plus rapide)
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Vous collerez votre URL Neon dans le dashboard Render
+      - key: JWT_SECRET
+        generateValue: true # Render va créer un secret aléatoire pour vous
+      - key: FRONTEND_URL
+        value: "*" # Temporairement ouvert, à restreindre après le déploiement du site

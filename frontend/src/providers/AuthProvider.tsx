@@ -11,6 +11,10 @@ interface User {
     id: string;
     email: string;
     role: string;
+    nom_complet?: string;
+    photo_profil?: string;
+    section?: string;
+    numero_compte?: string;
 }
 
 /**

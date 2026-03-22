@@ -90,7 +90,7 @@ async function main() {
                 numeroCompte: compteCollectif,
                 nomComplet: `Compte Collectif ${sec.nom}`,
                 typeCompte: sec.nom,
-                telephone: '000000',
+                telephone: `SYS-${compteCollectif}`, // Unicité garantie
                 dateAdhesion: new Date(),
                 statut: 'actif',
             }
@@ -104,7 +104,7 @@ async function main() {
                 numeroCompte: revenueAccount,
                 nomComplet: `REVENUS ${sec.nom}`,
                 typeCompte: sec.nom,
-                telephone: '000000',
+                telephone: `SYS-${revenueAccount}`, // Unicité garantie
                 dateAdhesion: new Date(),
                 statut: 'actif',
             }
@@ -119,7 +119,7 @@ async function main() {
                 numeroCompte: creditAccount,
                 nomComplet: `CRÉDITS ${sec.nom}`,
                 typeCompte: sec.nom,
-                telephone: '000000',
+                telephone: `SYS-${creditAccount}`, // Unicité garantie
                 dateAdhesion: new Date(),
                 statut: 'actif',
             }
@@ -157,7 +157,7 @@ async function main() {
             numeroCompte: 'MW-REVENUS-GLOBAL',
             nomComplet: 'REVENUS GLOBAL CONSOLIDÉ',
             typeCompte: 'SYSTEME',
-            telephone: '000000',
+            telephone: 'SYS-GLOBAL-REV',
             dateAdhesion: new Date(),
             statut: 'actif'
         }
@@ -171,14 +171,57 @@ async function main() {
             numeroCompte: 'MW-TRESORERIE-CREDITS',
             nomComplet: 'TRÉSORERIE CRÉDITS GLOBAL',
             typeCompte: 'SYSTEME',
-            telephone: '000000',
+            telephone: 'SYS-GLOBAL-CRED',
             dateAdhesion: new Date(),
             statut: 'actif'
         }
     });
 
-    console.log('✅ Tous les comptes système sont prêts.');
+    // --- INITIALISATION DES PARAMÈTRES GÉNÉRAUX ---
+    console.log('🔄 Initialisation des paramètres généraux...');
+    const defaultParams = {
+        solde_min_fc: 10000,
+        solde_min_usd: 5,
+        montant_min_depot_fc: 1000,
+        montant_min_depot_usd: 1,
+        montant_min_retrait_fc: 5000,
+        montant_min_retrait_usd: 5,
+        limite_retrait_jour_fc: 50000000,
+        limite_retrait_jour_usd: 5000000,
+        max_retraits_par_jour: 5,
+        montant_max_par_retrait_fc: 500000,
+        montant_max_par_retrait_usd: 500,
+        taux_usd_cdf: 2217.268,
+        heures_autorisees: { debut: '08:00', fin: '22:00' },
+        motif_obligatoire: true,
+        retraits: {
+            frais_retrait: {
+                FC: [
+                    { max: 50000, taux: 0.03 },
+                    { max: 500000, taux: 0.025 },
+                    { max: 999999999, taux: 0.02 },
+                ],
+                USD: [
+                    { max: 50, taux: 0.03 },
+                    { max: 500, taux: 0.025 },
+                    { max: 999999, taux: 0.02 },
+                ],
+            },
+        },
+    };
 
+    await prisma.parametreEpargne.upsert({
+        where: { nomParametre: 'parametres_generaux' },
+        update: {},
+        create: {
+            nomParametre: 'parametres_generaux',
+            valeur: JSON.stringify(defaultParams),
+            description: 'Paramètres généraux de gestion de la coopérative',
+        },
+    });
+    console.log('✅ Paramètres généraux initialisés.');
+
+    console.log('✅ Tous les comptes système sont prêts.');
     console.log('🏁 Seeding finished.');
 }
 

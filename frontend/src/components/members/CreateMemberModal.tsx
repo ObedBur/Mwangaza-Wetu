@@ -10,6 +10,8 @@ import { useZkTeco } from "@/hooks/useZkTeco";
 import { ACCOUNT_TYPES } from "@/lib/constants";
 import { BiometricScanner } from "@/components/biometric";
 import { AdminVerificationModal } from "@/components/auth/AdminVerificationModal";
+import { MemberRecord } from "@/types";
+import { Copy, QrCode, CheckCircle2 } from "lucide-react";
 
 // Composant de téléchargement de photo premium
 const PhotoUpload = ({
@@ -83,8 +85,63 @@ const PhotoUpload = ({
 interface CreateMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: MemberInput) => void | Promise<void>;
+  onSubmit: (data: MemberInput) => Promise<any>;
 }
+
+const SuccessScreen = ({ member, onClose }: { member: MemberRecord; onClose: () => void }) => {
+  const activationUrl = typeof window !== 'undefined' 
+    ? `${window.location.origin}/activate?t=${member.activationToken}`
+    : `http://localhost:4000/activate?t=${member.activationToken}`;
+  
+  return (
+    <div className="flex flex-col items-center p-8 space-y-6 animate-in zoom-in-95 duration-500">
+       <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center shadow-xl shadow-green-100">
+         <CheckCircle2 className="w-12 h-12 text-white" />
+       </div>
+       
+       <div className="text-center space-y-2">
+         <h3 className="text-2xl font-black text-slate-900 tracking-tight">Membre Enregistré !</h3>
+         <p className="text-slate-500 text-sm">Le compte <strong className="text-primary">{member.numeroCompte}</strong> a été créé avec succès.</p>
+       </div>
+
+       <div className="w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-6 flex flex-col items-center space-y-4">
+         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center flex items-center gap-2">
+            <QrCode className="w-3 h-3" /> QR Code d'Activation Mobile
+         </p>
+         <div className="p-3 bg-white rounded-2xl shadow-sm border border-slate-100">
+           <img 
+             src={`https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${encodeURIComponent(activationUrl)}`}
+             alt="Activation QR"
+             className="w-40 h-40"
+           />
+         </div>
+         <p className="text-[11px] text-slate-500 text-center px-4 font-medium leading-relaxed">
+           Le membre doit scanner ce code pour définir son mot de passe sur son téléphone et accéder à son espace.
+         </p>
+       </div>
+
+       <div className="flex flex-col w-full gap-2">
+         <button
+           type="button"
+           onClick={() => {
+             navigator.clipboard.writeText(activationUrl);
+             alert("Lien d'activation copié !");
+           }}
+           className="w-full py-4 bg-primary/10 text-primary font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-primary/20 transition-all flex items-center justify-center gap-2"
+         >
+           <Copy className="w-4 h-4" /> Copier le lien d'activation
+         </button>
+         <button
+           type="button"
+           onClick={onClose}
+           className="w-full py-5 bg-slate-900 text-white font-black text-sm uppercase tracking-widest rounded-2xl shadow-lg transition-all active:scale-95 mt-2"
+         >
+           Terminer l'Enrôlement
+         </button>
+       </div>
+    </div>
+  );
+};
 
 export default function CreateMemberModal({
   isOpen,
@@ -101,6 +158,9 @@ export default function CreateMemberModal({
   // État pour la validation admin avant soumission
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<MemberInput | null>(null);
+  
+  // État pour afficher le succès après création
+  const [createdMember, setCreatedMember] = useState<MemberRecord | null>(null);
 
   const { isScanning, scanStatus, scanError, userId, scanFingerprint } = useZkTeco({ mode: 'registration' });
   const delegueZk = useZkTeco({ mode: 'registration' });
@@ -189,18 +249,33 @@ export default function CreateMemberModal({
     setIsAdminModalOpen(true);
   };
 
-  const onAdminVerified = () => {
+  const onAdminVerified = async () => {
     if (!pendingFormData) return;
 
-    // 3. Envoyer les données propres finalisées
-    onSubmit(pendingFormData);
+    try {
+      // 3. Envoyer les données propres finalisées
+      const response = await onSubmit(pendingFormData);
+      
+      if (response && response.id) {
+        setCreatedMember(response);
+      } else {
+        // En cas de succès mais pas de réponse directe (fallback)
+        handleClose();
+      }
+    } catch (error) {
+      // Les erreurs sont déjà gérées par le toast dans le parent
+      setIsAdminModalOpen(false);
+    } finally {
+      setPendingFormData(null);
+    }
+  };
 
-    // Reset et nettoyage local
+  const handleClose = () => {
     reset();
     setMemberPhoto("");
     setDeleguePhoto("");
-    setIsAdminModalOpen(false);
-    setPendingFormData(null);
+    setCreatedMember(null);
+    onClose();
   };
 
 
@@ -211,7 +286,7 @@ export default function CreateMemberModal({
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 transition-opacity"
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       {/* Modal Panel - Centered */}
@@ -228,18 +303,23 @@ export default function CreateMemberModal({
               </p>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400 shrink-0 active:scale-95"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Form Content */}
-          <form
-            onSubmit={handleSubmit(handleFormSubmit)}
-            className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-6"
-          >
+          {createdMember ? (
+            <SuccessScreen member={createdMember} onClose={handleClose} />
+          ) : (
+            <>
+              {/* Form Content */}
+              <form
+                id="create-member-form"
+                onSubmit={handleSubmit(handleFormSubmit)}
+                className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-6"
+              >
             {/* Section 01: Type de Compte */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
@@ -661,26 +741,29 @@ export default function CreateMemberModal({
             </div>
           </form>
 
-          {/* Footer - Fixed Bottom */}
-          <div className="p-4 sm:p-6 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-3 sticky bottom-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="py-2.5 sm:py-3.5 px-4 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold text-xs sm:text-sm bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shadow-sm"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              form="create-member-form" // On lie au bouton si nécéssaire, ou on garde handleSubmit
-              onClick={handleSubmit(handleFormSubmit)} // Déclenchement manuel si hors scope form
-              disabled={isSubmitting}
-              className="py-2.5 sm:py-3.5 px-4 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:hover:bg-primary text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 flex items-center justify-center gap-2"
-            >
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSubmitting ? "Création..." : "Enregistrer Membre"}
-            </button>
-          </div>
+              </form>
+              {/* Footer - Fixed Bottom */}
+              <div className="p-4 sm:p-6 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-3 sticky bottom-0">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="py-2.5 sm:py-3.5 px-4 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold text-xs sm:text-sm bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shadow-sm"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  form="create-member-form"
+                  onClick={handleSubmit(handleFormSubmit)}
+                  disabled={isSubmitting}
+                  className="py-2.5 sm:py-3.5 px-4 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-60 disabled:hover:bg-primary text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-primary/20 active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isSubmitting ? "Création..." : "Enregistrer Membre"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

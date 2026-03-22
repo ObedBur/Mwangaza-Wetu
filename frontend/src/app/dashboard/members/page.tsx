@@ -28,17 +28,19 @@ export default function MembersPage() {
     try {
       const response = await createMember(data);
       console.log(" Membre créé avec succès :", response);
-      setIsModalOpen(false);
+      // On ne ferme plus le modal ici, on laisse le modal gérer l'état de succès
       toastSuccess(
         "Membre créé avec succès",
         `Le numéro de compte généré est : ${response.numeroCompte}`
       );
+      return response; // Retourner pour le modal
     } catch (error: any) {
       console.error(" Impossible de créer le membre", error);
       toastError(
         "Échec de la création",
         error.message || "Une erreur est survenue lors de la création du membre"
       );
+      throw error;
     }
   };
 

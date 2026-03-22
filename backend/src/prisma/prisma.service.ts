@@ -8,7 +8,12 @@ import { ConfigService } from '@nestjs/config';
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor(config: ConfigService) {
     const connectionString = config.get<string>('DATABASE_URL');
-    const pool = new Pool({ connectionString });
+    const isNeon = connectionString?.includes('neon.tech');
+    
+    const pool = new Pool({ 
+      connectionString,
+      ssl: isNeon ? { rejectUnauthorized: false } : false,
+    });
     const adapter = new PrismaPg(pool);
 
     super({ adapter });
